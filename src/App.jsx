@@ -143,7 +143,8 @@ export default function App() {
   return (
     <div className="h-screen overflow-hidden bg-slate-950 text-slate-100 p-4 md:p-6">
       <div className="h-full flex flex-col min-h-0 rounded-2xl border border-slate-800/70 bg-slate-950/60 backdrop-blur-sm p-3 md:p-4">
-        <header className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <header className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between relative">
+          <div className="pointer-events-none absolute -top-8 right-0 h-24 w-40 bg-indigo-500/20 blur-3xl" />
           <div>
             <h1 className="text-xl md:text-2xl font-bold tracking-tight">
               PPE Monitoring Dashboard
@@ -218,7 +219,7 @@ export default function App() {
               return (
                 <section
                   key={cam.id}
-                  className={`rounded-2xl border bg-slate-900 overflow-hidden shadow-lg ${
+                  className={`rounded-2xl border bg-slate-900 overflow-hidden shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl ${
                     hasViolation ? 'border-rose-500/70' : 'border-slate-800'
                   }`}
                 >
@@ -393,21 +394,23 @@ export default function App() {
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
             하단 이벤트 피드
           </div>
-          <div className="flex gap-2 overflow-x-auto whitespace-nowrap pb-1">
-            {bottomFeed.map((item) => (
-              <div
-                key={item.id}
-                className={`text-xs rounded-md px-3 py-1.5 border ${
-                  item.level === 'critical'
-                    ? 'border-rose-500/40 bg-rose-500/10 text-rose-200'
-                    : item.level === 'warning'
-                      ? 'border-amber-500/40 bg-amber-500/10 text-amber-200'
-                      : 'border-sky-500/40 bg-sky-500/10 text-sky-200'
-                }`}
-              >
-                {item.text}
-              </div>
-            ))}
+          <div className="ticker-mask">
+            <div className="ticker-track">
+              {[...bottomFeed, ...bottomFeed].map((item, idx) => (
+                <div
+                  key={`${item.id}-${idx}`}
+                  className={`text-xs rounded-md px-3 py-1.5 border shrink-0 ${
+                    item.level === 'critical'
+                      ? 'border-rose-500/40 bg-rose-500/10 text-rose-200'
+                      : item.level === 'warning'
+                        ? 'border-amber-500/40 bg-amber-500/10 text-amber-200'
+                        : 'border-sky-500/40 bg-sky-500/10 text-sky-200'
+                  }`}
+                >
+                  {item.text}
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       </div>
