@@ -132,11 +132,11 @@ export default function App() {
           </div>
         </section>
 
-        <header className="mb-2 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between relative">
+        <header className="mb-1.5 flex flex-col gap-1.5 lg:flex-row lg:items-center lg:justify-between relative">
           <div className="pointer-events-none absolute -top-8 right-0 h-24 w-40 bg-indigo-500/20 blur-3xl" />
           <div>
-            <h1 className="text-lg md:text-xl font-bold tracking-tight">PPE Monitoring Dashboard</h1>
-            <p className="text-xs text-slate-400 mt-0.5">저장 영상 기반 안전모/안전조끼 착용 분석 · {scenario.name}</p>
+            <h1 className="text-base md:text-lg font-bold tracking-tight">PPE Monitoring Dashboard</h1>
+            <p className="text-[11px] text-slate-400 mt-0">저장 영상 기반 안전모/안전조끼 착용 분석 · {scenario.name}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
@@ -151,7 +151,7 @@ export default function App() {
           </div>
         </header>
 
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-1.5 mb-1.5">
           <KpiCard title="총 탐지 인원" value={`${totalPeople}`} sub="누적 기준" />
           <KpiCard title="위반 건수" value={`${violationCount}`} sub="안전모/조끼 미착용" tone="warn" />
           <KpiCard title="준수율" value={`${complianceRate}%`} sub="분석 구간 평균" tone="good" />
@@ -165,13 +165,17 @@ export default function App() {
           </section>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-4 flex-1 min-h-0 mb-3">
-          <main className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full overflow-hidden">
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-3 flex-1 min-h-0 mb-2">
+          <main className="relative grid grid-cols-1 md:grid-cols-2 md:grid-rows-2 gap-0 h-full overflow-hidden rounded-xl bg-black">
+            <div className="pointer-events-none absolute inset-0 hidden md:block z-10">
+              <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/35" />
+              <div className="absolute top-1/2 left-0 w-full h-px -translate-y-1/2 bg-white/35" />
+            </div>
             {cameras.map((cam) => {
               const hasViolation = filteredAlerts.some((log) => log.camera === cam.name && ['helmet', 'vest', 'both'].includes(log.type))
               return (
-                <section key={cam.id} className={`rounded-2xl border bg-slate-900 overflow-hidden shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl ${hasViolation ? 'border-rose-500/70' : 'border-slate-800'}`}>
-                  <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800 bg-slate-900/90">
+                <section key={cam.id} className="relative bg-black overflow-hidden">
+                  <div className="absolute left-2 right-2 top-2 z-20 flex items-center justify-between px-2 py-1 rounded-md bg-slate-900/75 backdrop-blur-sm">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{cam.name}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${cam.online ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>{cam.online ? 'ONLINE' : 'OFFLINE'}</span>
@@ -179,7 +183,7 @@ export default function App() {
                     </div>
                     <button onClick={() => setSelected(cam)} className="text-xs px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700">전체화면</button>
                   </div>
-                  <div className="h-[20vh] md:h-[23vh] xl:h-[28vh] bg-black">
+                  <div className="h-full bg-black">
                     {cam.online ? <video className="w-full h-full object-cover" src={cam.url} controls autoPlay muted playsInline /> : <div className="w-full h-full flex items-center justify-center text-slate-500">신호 없음</div>}
                   </div>
                 </section>
