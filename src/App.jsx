@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 const cameras = [
   {
@@ -76,6 +76,21 @@ const bottomFeed = [
   { id: 4, level: 'info', text: '[18:21:35] CAM 01 - Entrance | PPE 준수 상태 정상' },
 ]
 
+const demoScenario = {
+  A: {
+    name: '시나리오 A · 주간 작업 구역',
+    people: 17,
+    violations: 5,
+    completeAt: '20:44:10',
+  },
+  B: {
+    name: '시나리오 B · 야간 창고 점검',
+    people: 11,
+    violations: 3,
+    completeAt: '20:44:35',
+  },
+}
+
 const levelStyles = {
   critical: 'bg-rose-500/15 text-rose-300 border border-rose-500/30',
   warning: 'bg-amber-500/15 text-amber-300 border border-amber-500/30',
@@ -88,6 +103,8 @@ export default function App() {
   const [alertFilter, setAlertFilter] = useState('all')
   const [analysisState, setAnalysisState] = useState('idle') // idle | analyzing | done
   const [progress, setProgress] = useState(0)
+  const [activeScenario, setActiveScenario] = useState('A')
+  const [showDoneModal, setShowDoneModal] = useState(false)
 
   const nowLabel = useMemo(
     () =>
@@ -105,12 +122,12 @@ export default function App() {
     [],
   )
 
-  const violationCount = alertLogs.filter((log) =>
-    ['helmet', 'vest', 'both'].includes(log.type),
-  ).length
+  const scenario = demoScenario[activeScenario]
+  const violationCount = scenario.violations
+  const totalPeople = scenario.people
   const complianceRate = Math.max(
     0,
-    100 - Math.round((violationCount / (violationCount + 12)) * 100),
+    100 - Math.round((violationCount / Math.max(totalPeople, 1)) * 100),
   )
 
   const filteredAlerts = useMemo(() => {
@@ -120,6 +137,7 @@ export default function App() {
 
   const startMockAnalysis = () => {
     setAnalysisState('analyzing')
+    setShowDoneModal(false)
     setProgress(0)
 
     let current = 0
@@ -130,7 +148,7 @@ export default function App() {
         clearInterval(timer)
         setAnalysisState('done')
       }
-    }, 180)
+    }, activeScenario === 'A' ? 180 : 220)
   }
 
   const statusText =
@@ -139,6 +157,12 @@ export default function App() {
       : analysisState === 'analyzing'
         ? '분석 중'
         : '분석 완료'
+
+  useEffect(() => {
+    if (analysisState === 'done') {
+      setShowDoneModal(true)
+    }
+  }, [analysisState])
 
   return (
     <div className="h-screen overflow-hidden bg-slate-950 text-slate-100 p-4 md:p-6">
@@ -150,7 +174,7 @@ export default function App() {
               PPE Monitoring Dashboard
             </h1>
             <p className="text-sm text-slate-400 mt-1">
-              저장 영상 기반 안전모/안전조끼 착용 분석
+              저장 영상 기반 안전모/안전조끼 착용 분석 · {scenario.name}
             </p>
           </div>
 
@@ -158,6 +182,20 @@ export default function App() {
             <span className="text-xs rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-slate-300">
               마지막 업데이트 {nowLabel}
             </span>
+            <div className="flex rounded-md border border-slate-700 overflow-hidden">
+              <button
+                onClick={() => setActiveScenario('A')}
+                className={`text-xs px-2.5 py-2 ${activeScenario === 'A' ? 'bg-indigo-600' : 'bg-slate-900 hover:bg-slate-800'}`}
+              >
+                시나리오 A
+              </button>
+              <button
+                onClick={() => setActiveScenario('B')}
+                className={`text-xs px-2.5 py-2 border-l border-slate-700 ${activeScenario === 'B' ? 'bg-indigo-600' : 'bg-slate-900 hover:bg-slate-800'}`}
+              >
+                시나리오 B
+              </button>
+            </div>
             <label className="text-xs px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 cursor-pointer">
               영상 업로드
               <input type="file" accept="video/*" className="hidden" />
@@ -168,11 +206,17 @@ export default function App() {
             >
               분석 시작
             </button>
+            <button
+              disabled={analysisState !== 'done'}
+              className="text-xs px-3 py-2 rounded-md bg-emerald-600/90 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-400"
+            >
+              결과 다운로드
+            </button>
           </div>
         </header>
 
         <section className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-          <KpiCard title="총 탐지 인원" value="17" sub="누적 기준" />
+          <KpiCard title="총 탐지 인원" value={`${totalPeople}`} sub="누적 기준" />
           <KpiCard
             title="위반 건수"
             value={`${violationCount}`}
@@ -204,6 +248,9 @@ export default function App() {
                 style={{ width: `${progress}%` }}
               />
             </div>
+            {analysisState === 'done' && (
+              <p className="mt-2 text-xs text-emerald-300">분석 완료 · 리포트 생성 가능</p>
+            )}
           </section>
         )}
 
@@ -414,6 +461,20 @@ export default function App() {
           </div>
         </section>
       </div>
+
+      {showDoneModal && (
+        <div className="fixed inset-0 bg-black/70 z-40 flex items-center justify-center p-4" onClick={() => setShowDoneModal(false)}>
+          <div className="w-full max-w-md rounded-xl border border-emerald-500/30 bg-slate-900 p-4" onClick={(e) => e.stopPropagation()}>
+            <p className="text-sm text-emerald-300">분석 완료</p>
+            <h3 className="text-lg font-semibold mt-1">{scenario.name}</h3>
+            <p className="text-sm text-slate-400 mt-2">완료 시각 {scenario.completeAt} · 총 {totalPeople}명 중 위반 {violationCount}건 감지</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button className="text-xs px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700" onClick={() => setShowDoneModal(false)}>닫기</button>
+              <button className="text-xs px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500">리포트 보기</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selected && (
         <div
