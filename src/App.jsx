@@ -118,8 +118,9 @@ export default function App() {
         : '분석 완료'
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-6">
-      <header className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <div className="h-screen overflow-hidden bg-slate-950 text-slate-100 p-4 md:p-6">
+      <div className="h-full flex flex-col min-h-0">
+        <header className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-xl md:text-2xl font-bold">PPE Monitoring Dashboard</h1>
           <p className="text-sm text-slate-400 mt-1">저장 영상 기반 안전모/안전조끼 착용 분석</p>
@@ -158,8 +159,8 @@ export default function App() {
         </section>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-4">
-        <main className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-4 flex-1 min-h-0">
+        <main className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full overflow-hidden">
           {cameras.map((cam) => {
             const hasViolation = filteredAlerts.some(
               (log) => log.camera === cam.name && ['helmet', 'vest', 'both'].includes(log.type),
@@ -198,7 +199,7 @@ export default function App() {
                   </button>
                 </div>
 
-                <div className="aspect-video bg-black">
+                <div className="h-[20vh] md:h-[23vh] xl:h-[28vh] bg-black">
                   {cam.online ? (
                     <video
                       className="w-full h-full object-cover"
@@ -219,7 +220,7 @@ export default function App() {
           })}
         </main>
 
-        <aside className="rounded-2xl border border-slate-800 bg-slate-900 p-4 space-y-4 h-fit xl:sticky xl:top-6">
+        <aside className="rounded-2xl border border-slate-800 bg-slate-900 p-4 space-y-4 h-full overflow-hidden">
           <section className="rounded-xl bg-slate-950 border border-slate-800 p-3">
             <h2 className="text-sm font-semibold text-slate-300 mb-2">시스템 상태</h2>
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
@@ -295,6 +296,7 @@ export default function App() {
           </section>
         </aside>
       </div>
+    </div>
 
       {selected && (
         <div
