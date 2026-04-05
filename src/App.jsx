@@ -115,9 +115,9 @@ export default function App() {
   }, [analysisState])
 
   return (
-    <div className="h-screen overflow-hidden bg-slate-950 text-slate-100 p-4 md:p-6">
-      <div className="h-full flex flex-col min-h-0 rounded-2xl border border-slate-800/70 bg-slate-950/60 backdrop-blur-sm p-3 md:p-4">
-        <section className="mb-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+    <div className="h-screen overflow-hidden bg-slate-950 text-slate-100 p-3 md:p-4">
+      <div className="h-full flex flex-col min-h-0 rounded-2xl border border-slate-800/70 bg-slate-950/60 backdrop-blur-sm p-2.5 md:p-3">
+        <section className="mb-2 rounded-xl border border-slate-800 bg-slate-900 px-2.5 py-1.5 flex flex-wrap items-center justify-between gap-1.5">
           <div className="flex items-center gap-2 text-xs">
             <span className="font-semibold">PPE CONTROL CENTER</span>
             <span className="rounded border border-indigo-500/40 bg-indigo-500/15 px-1.5 py-0.5 text-indigo-300">DEMO</span>
@@ -132,26 +132,26 @@ export default function App() {
           </div>
         </section>
 
-        <header className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between relative">
+        <header className="mb-2 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between relative">
           <div className="pointer-events-none absolute -top-8 right-0 h-24 w-40 bg-indigo-500/20 blur-3xl" />
           <div>
-            <h1 className="text-xl md:text-2xl font-bold tracking-tight">PPE Monitoring Dashboard</h1>
-            <p className="text-sm text-slate-400 mt-1">저장 영상 기반 안전모/안전조끼 착용 분석 · {scenario.name}</p>
+            <h1 className="text-lg md:text-xl font-bold tracking-tight">PPE Monitoring Dashboard</h1>
+            <p className="text-xs text-slate-400 mt-0.5">저장 영상 기반 안전모/안전조끼 착용 분석 · {scenario.name}</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs rounded-md border border-slate-700 bg-slate-900 px-2.5 py-2 text-slate-300">마지막 업데이트 {nowLabel}</span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-slate-300">마지막 업데이트 {nowLabel}</span>
             <div className="flex rounded-md border border-slate-700 overflow-hidden">
-              <button onClick={() => setActiveScenario('A')} className={`text-xs px-2.5 py-2 ${activeScenario === 'A' ? 'bg-indigo-600' : 'bg-slate-900 hover:bg-slate-800'}`}>시나리오 A</button>
-              <button onClick={() => setActiveScenario('B')} className={`text-xs px-2.5 py-2 border-l border-slate-700 ${activeScenario === 'B' ? 'bg-indigo-600' : 'bg-slate-900 hover:bg-slate-800'}`}>시나리오 B</button>
+              <button onClick={() => setActiveScenario('A')} className={`text-[11px] px-2 py-1.5 ${activeScenario === 'A' ? 'bg-indigo-600' : 'bg-slate-900 hover:bg-slate-800'}`}>시나리오 A</button>
+              <button onClick={() => setActiveScenario('B')} className={`text-[11px] px-2 py-1.5 border-l border-slate-700 ${activeScenario === 'B' ? 'bg-indigo-600' : 'bg-slate-900 hover:bg-slate-800'}`}>시나리오 B</button>
             </div>
-            <label className="text-xs px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 cursor-pointer">영상 업로드<input type="file" accept="video/*" className="hidden" /></label>
-            <button onClick={startMockAnalysis} className="text-xs px-3 py-2 rounded-md bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-600/20">분석 시작</button>
-            <button disabled={analysisState !== 'done'} className="text-xs px-3 py-2 rounded-md bg-emerald-600/90 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-400">결과 다운로드</button>
+            <label className="text-[11px] px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 cursor-pointer">영상 업로드<input type="file" accept="video/*" className="hidden" /></label>
+            <button onClick={startMockAnalysis} className="text-[11px] px-2.5 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-600/20">분석 시작</button>
+            <button disabled={analysisState !== 'done'} className="text-[11px] px-2.5 py-1.5 rounded-md bg-emerald-600/90 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-400">결과 다운로드</button>
           </div>
         </header>
 
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
           <KpiCard title="총 탐지 인원" value={`${totalPeople}`} sub="누적 기준" />
           <KpiCard title="위반 건수" value={`${violationCount}`} sub="안전모/조끼 미착용" tone="warn" />
           <KpiCard title="준수율" value={`${complianceRate}%`} sub="분석 구간 평균" tone="good" />
@@ -310,10 +310,10 @@ export default function App() {
 function KpiCard({ title, value, sub, tone = 'default' }) {
   const toneStyle = tone === 'warn' ? 'border-amber-500/30 bg-amber-500/10' : tone === 'good' ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-slate-800 bg-slate-900'
   return (
-    <article className={`rounded-xl border p-3 shadow-sm ${toneStyle}`}>
-      <p className="text-xs text-slate-400">{title}</p>
-      <p className="text-lg font-bold mt-1">{value}</p>
-      <p className="text-xs text-slate-500 mt-1">{sub}</p>
+    <article className={`rounded-xl border p-2.5 shadow-sm ${toneStyle}`}>
+      <p className="text-[11px] text-slate-400">{title}</p>
+      <p className="text-base font-bold mt-0.5">{value}</p>
+      <p className="text-[11px] text-slate-500 mt-0.5">{sub}</p>
     </article>
   )
 }
