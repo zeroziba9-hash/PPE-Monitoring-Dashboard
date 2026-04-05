@@ -117,7 +117,7 @@ export default function App() {
   return (
     <div className="h-screen overflow-hidden bg-slate-950 text-slate-100 p-3 md:p-4">
       <div className="h-full flex flex-col min-h-0 rounded-2xl border border-slate-800/70 bg-slate-950/60 backdrop-blur-sm p-2.5 md:p-3">
-        <section className="mb-2 rounded-xl border border-slate-800 bg-slate-900 px-2.5 py-1.5 flex flex-wrap items-center justify-between gap-1.5">
+        <section className="mb-1.5 rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 flex flex-wrap items-center justify-between gap-1">
           <div className="flex items-center gap-2 text-xs">
             <span className="font-semibold">PPE CONTROL CENTER</span>
             <span className="rounded border border-indigo-500/40 bg-indigo-500/15 px-1.5 py-0.5 text-indigo-300">DEMO</span>
@@ -132,11 +132,11 @@ export default function App() {
           </div>
         </section>
 
-        <header className="mb-1.5 flex flex-col gap-1.5 lg:flex-row lg:items-center lg:justify-between relative">
+        <header className="mb-1 flex flex-col gap-1 lg:flex-row lg:items-center lg:justify-between relative">
           <div className="pointer-events-none absolute -top-8 right-0 h-24 w-40 bg-indigo-500/20 blur-3xl" />
           <div>
-            <h1 className="text-base md:text-lg font-bold tracking-tight">PPE Monitoring Dashboard</h1>
-            <p className="text-[11px] text-slate-400 mt-0">저장 영상 기반 안전모/안전조끼 착용 분석 · {scenario.name}</p>
+            <h1 className="text-[15px] md:text-base font-bold tracking-tight">PPE Monitoring Dashboard</h1>
+            <p className="text-[10px] text-slate-400 mt-0">저장 영상 기반 안전모/안전조끼 착용 분석 · {scenario.name}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
@@ -151,7 +151,7 @@ export default function App() {
           </div>
         </header>
 
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-1.5 mb-1.5">
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-1 mb-1">
           <KpiCard title="총 탐지 인원" value={`${totalPeople}`} sub="누적 기준" />
           <KpiCard title="위반 건수" value={`${violationCount}`} sub="안전모/조끼 미착용" tone="warn" />
           <KpiCard title="준수율" value={`${complianceRate}%`} sub="분석 구간 평균" tone="good" />
@@ -159,13 +159,13 @@ export default function App() {
         </section>
 
         {analysisState !== 'idle' && (
-          <section className="mb-3 rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <section className="mb-1.5 rounded-xl border border-slate-800 bg-slate-900 p-2">
             <div className="flex items-center justify-between text-xs text-slate-300 mb-2"><span>분석 진행률</span><span>{progress}% · {statusText}</span></div>
             <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden"><div className="h-full bg-gradient-to-r from-indigo-500 to-cyan-500 transition-all" style={{ width: `${progress}%` }} /></div>
           </section>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-3 flex-1 min-h-0 mb-2">
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-2 flex-1 min-h-0 mb-1.5">
           <main className="relative grid grid-cols-1 md:grid-cols-2 md:grid-rows-2 gap-0 h-full overflow-hidden rounded-xl bg-black">
             <div className="pointer-events-none absolute inset-0 hidden md:block z-10">
               <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/35" />
@@ -191,9 +191,9 @@ export default function App() {
             })}
           </main>
 
-          <aside className="grid grid-rows-[auto_auto_1fr] gap-3 h-full min-h-0">
-            <section className="rounded-xl bg-slate-950 border border-slate-800 p-3">
-              <h2 className="text-sm font-semibold text-slate-300 mb-2">시스템 상태</h2>
+          <aside className="grid grid-rows-[auto_auto_1fr] gap-2 h-full min-h-0">
+            <section className="rounded-xl bg-slate-950 border border-slate-800 p-2.5">
+              <h2 className="text-xs font-semibold text-slate-300 mb-1.5">시스템 상태</h2>
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
                 <StateTile label="전체" value={cameras.length} />
                 <StateTile label="정상" value={onlineCount} tone="good" />
@@ -201,8 +201,8 @@ export default function App() {
               </div>
             </section>
 
-            <section className="rounded-xl bg-slate-950 border border-slate-800 p-3">
-              <h3 className="text-xs text-slate-400 mb-2">선택 알람 상세</h3>
+            <section className="rounded-xl bg-slate-950 border border-slate-800 p-2.5">
+              <h3 className="text-[11px] text-slate-400 mb-1.5">선택 알람 상세</h3>
               {selectedAlert ? (
                 <div className="space-y-2 text-xs">
                   <div className="flex items-center justify-between">
@@ -221,7 +221,7 @@ export default function App() {
               ) : <p className="text-xs text-slate-500">선택된 알람이 없습니다.</p>}
             </section>
 
-            <section className="rounded-xl bg-slate-950 border border-slate-800 p-3 min-h-0 flex flex-col">
+            <section className="rounded-xl bg-slate-950 border border-slate-800 p-2.5 min-h-0 flex flex-col">
               <div className="flex gap-2 mb-3">
                 <button onClick={() => setActiveTab('alerts')} className={`text-xs px-2 py-1 rounded-md ${activeTab === 'alerts' ? 'bg-indigo-600' : 'bg-slate-800 hover:bg-slate-700'}`}>알람 로그</button>
                 <button onClick={() => setActiveTab('history')} className={`text-xs px-2 py-1 rounded-md ${activeTab === 'history' ? 'bg-indigo-600' : 'bg-slate-800 hover:bg-slate-700'}`}>운영 히스토리</button>
