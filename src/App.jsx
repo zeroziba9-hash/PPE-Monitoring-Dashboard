@@ -117,29 +117,29 @@ export default function App() {
   return (
     <div className="h-screen overflow-hidden bg-slate-950 text-slate-100 p-3 md:p-4">
       <div className="h-full flex flex-col min-h-0 rounded-2xl border border-slate-800/70 bg-slate-950/60 backdrop-blur-sm p-2.5 md:p-3">
-        <section className="mb-1.5 rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 flex flex-wrap items-center justify-between gap-1">
+        <section className="mb-1 rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 flex items-center justify-between gap-1">
           <div className="flex items-center gap-2 text-xs">
             <span className="font-semibold">PPE CONTROL CENTER</span>
             <span className="rounded border border-indigo-500/40 bg-indigo-500/15 px-1.5 py-0.5 text-indigo-300">DEMO</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-300">
+          <div className="flex items-center gap-1 text-[11px] text-slate-300">
             {statusChip.map((chip) => (
-              <span key={chip.name} className="rounded border border-slate-700 bg-slate-950 px-2 py-1">
+              <span key={chip.name} className="rounded border border-slate-700 bg-slate-950 px-1.5 py-0.5">
                 {chip.name}: <b className="text-emerald-300">{chip.value}</b>
               </span>
             ))}
-            <span className="rounded border border-slate-700 bg-slate-950 px-2 py-1">Operator: admin01</span>
+            <span className="rounded border border-slate-700 bg-slate-950 px-1.5 py-0.5">Operator: admin01</span>
           </div>
         </section>
 
-        <header className="mb-1 flex flex-col gap-1 lg:flex-row lg:items-center lg:justify-between relative">
+        <header className="mb-1 flex items-center justify-between gap-1 relative">
           <div className="pointer-events-none absolute -top-8 right-0 h-24 w-40 bg-indigo-500/20 blur-3xl" />
           <div>
             <h1 className="text-[15px] md:text-base font-bold tracking-tight">PPE Monitoring Dashboard</h1>
             <p className="text-[10px] text-slate-400 mt-0">저장 영상 기반 안전모/안전조끼 착용 분석 · {scenario.name}</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex items-center gap-1 overflow-x-auto whitespace-nowrap">
             <span className="text-[11px] rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-slate-300">마지막 업데이트 {nowLabel}</span>
             <div className="flex rounded-md border border-slate-700 overflow-hidden">
               <button onClick={() => setActiveScenario('A')} className={`text-[11px] px-2 py-1.5 ${activeScenario === 'A' ? 'bg-indigo-600' : 'bg-slate-900 hover:bg-slate-800'}`}>시나리오 A</button>
@@ -151,7 +151,7 @@ export default function App() {
           </div>
         </header>
 
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-1 mb-1">
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-1 mb-0.5">
           <KpiCard title="총 탐지 인원" value={`${totalPeople}`} sub="누적 기준" />
           <KpiCard title="위반 건수" value={`${violationCount}`} sub="안전모/조끼 미착용" tone="warn" />
           <KpiCard title="준수율" value={`${complianceRate}%`} sub="분석 구간 평균" tone="good" />
@@ -165,7 +165,7 @@ export default function App() {
           </section>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-2 flex-1 min-h-0 mb-1.5">
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-1.5 flex-1 min-h-0 mb-1">
           <main className="relative grid grid-cols-1 md:grid-cols-2 md:grid-rows-2 gap-0 h-full overflow-hidden rounded-xl bg-black">
             <div className="pointer-events-none absolute inset-0 hidden md:block z-10">
               <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/35" />
@@ -191,7 +191,7 @@ export default function App() {
             })}
           </main>
 
-          <aside className="grid grid-rows-[auto_auto_1fr] gap-2 h-full min-h-0">
+          <aside className="grid grid-rows-[auto_auto_1fr] gap-1.5 h-full min-h-0">
             <section className="rounded-xl bg-slate-950 border border-slate-800 p-2.5">
               <h2 className="text-xs font-semibold text-slate-300 mb-1.5">시스템 상태</h2>
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
