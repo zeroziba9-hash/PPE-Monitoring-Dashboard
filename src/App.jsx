@@ -69,6 +69,13 @@ const eventHistory = [
   { id: 4, time: '18:02', action: '분석 작업 시작', actor: 'system' },
 ]
 
+const bottomFeed = [
+  { id: 1, level: 'critical', text: '[18:31:22] CAM 03 - Parking | 안전모 미착용 인원 감지' },
+  { id: 2, level: 'warning', text: '[18:29:10] CAM 02 - Lobby | 안전조끼 미착용 인원 감지' },
+  { id: 3, level: 'critical', text: '[18:27:04] CAM 04 - Warehouse | 안전모/안전조끼 미착용 인원 감지' },
+  { id: 4, level: 'info', text: '[18:21:35] CAM 01 - Entrance | PPE 준수 상태 정상' },
+]
+
 const levelStyles = {
   critical: 'bg-rose-500/15 text-rose-300 border border-rose-500/30',
   warning: 'bg-amber-500/15 text-amber-300 border border-amber-500/30',
@@ -199,7 +206,7 @@ export default function App() {
           </section>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-4 flex-1 min-h-0">
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-4 flex-1 min-h-0 mb-3">
           <main className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full overflow-hidden">
             {cameras.map((cam) => {
               const hasViolation = filteredAlerts.some(
@@ -380,6 +387,29 @@ export default function App() {
             </section>
           </aside>
         </div>
+
+        <section className="rounded-xl border border-slate-800 bg-slate-900 px-3 py-2">
+          <div className="flex items-center gap-2 text-xs text-slate-400 mb-2">
+            <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            하단 이벤트 피드
+          </div>
+          <div className="flex gap-2 overflow-x-auto whitespace-nowrap pb-1">
+            {bottomFeed.map((item) => (
+              <div
+                key={item.id}
+                className={`text-xs rounded-md px-3 py-1.5 border ${
+                  item.level === 'critical'
+                    ? 'border-rose-500/40 bg-rose-500/10 text-rose-200'
+                    : item.level === 'warning'
+                      ? 'border-amber-500/40 bg-amber-500/10 text-amber-200'
+                      : 'border-sky-500/40 bg-sky-500/10 text-sky-200'
+                }`}
+              >
+                {item.text}
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
 
       {selected && (
