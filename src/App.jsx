@@ -267,13 +267,13 @@ export default function App() {
         </div>
 
         <section className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-2">
-          <div className="rounded-xl border border-slate-800 bg-slate-900 px-2.5 py-1.5 overflow-hidden">
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mb-1">
+          <div className="rounded-xl border border-slate-800 bg-slate-900 px-2.5 py-1 overflow-hidden">
+            <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mb-0.5">
               <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />하단 이벤트 피드
             </div>
-            <div className="ticker-mask"><div className="ticker-track">{[...bottomFeed, ...bottomFeed].map((item, idx) => <div key={`${item.id}-${idx}`} className={`text-[11px] rounded-md px-2 py-1 border shrink-0 ${item.level === 'critical' ? 'border-rose-500/40 bg-rose-500/10 text-rose-200' : item.level === 'warning' ? 'border-amber-500/40 bg-amber-500/10 text-amber-200' : 'border-sky-500/40 bg-sky-500/10 text-sky-200'}`}>{item.text}</div>)}</div></div>
+            <div className="ticker-mask"><div className="ticker-track">{[...bottomFeed, ...bottomFeed].map((item, idx) => <div key={`${item.id}-${idx}`} className={`text-[10px] rounded-md px-2 py-0.5 border shrink-0 ${item.level === 'critical' ? 'border-rose-500/40 bg-rose-500/10 text-rose-200' : item.level === 'warning' ? 'border-amber-500/40 bg-amber-500/10 text-amber-200' : 'border-sky-500/40 bg-sky-500/10 text-sky-200'}`}>{item.text}</div>)}</div></div>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900 px-2.5 py-1.5 overflow-hidden">
+          <div className="rounded-xl border border-slate-800 bg-slate-900 px-2.5 py-1 overflow-hidden">
             <div className="text-[11px] text-slate-400 mb-1">System Console</div>
             <div className="space-y-0.5 text-[10px] font-mono text-slate-300 leading-tight">
               {systemEvents.map((line) => <p key={line} className="truncate">{line}</p>)}
