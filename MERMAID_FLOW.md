@@ -1,0 +1,31 @@
+# PPE 영상 처리 파이프라인 (Mermaid)
+
+```mermaid
+flowchart TD
+    A[영상 입력<br/>RTSP/파일] --> B[프레임 추출<br/>예: 5~10 FPS]
+    B --> C[전처리<br/>Resize / Normalize]
+    C --> D[객체 탐지 모델<br/>person / helmet / vest]
+    D --> E[객체 추적<br/>Track ID 부여]
+    E --> F[사람-보호구 매칭<br/>IoU / ROI / 중심점]
+    F --> G{PPE 판정}
+
+    G -->|정상| H1[정상 상태 기록]
+    G -->|헬멧 미착용| H2[위반 후보]
+    G -->|조끼 미착용| H2
+    G -->|둘 다 미착용| H2
+
+    H2 --> I[시간 안정화<br/>N프레임 연속 확인]
+    I --> J{중복 알람 쿨다운?}
+    J -->|쿨다운 중| K[이벤트 미발행<br/>카운트만 누적]
+    J -->|쿨다운 아님| L[위반 이벤트 발행]
+
+    L --> M[스냅샷 저장]
+    L --> N[DB/로그 저장]
+    L --> O[대시보드 이벤트 피드 반영]
+    H1 --> N
+```
+
+## 사용 팁
+- VS Code에서 이 파일 열기
+- 우클릭 → **Open Preview** 또는 `Ctrl+Shift+V`
+- Mermaid Preview 확장에서 다이어그램으로 렌더됨
