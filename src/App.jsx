@@ -314,10 +314,12 @@ export default function App() {
 function KpiCard({ title, value, sub, tone = 'default' }) {
   const toneStyle = tone === 'warn' ? 'border-amber-400/40 bg-gradient-to-br from-amber-500/12 to-slate-900/40' : tone === 'good' ? 'border-emerald-400/40 bg-gradient-to-br from-emerald-500/12 to-slate-900/40' : 'border-slate-700/80 bg-gradient-to-br from-slate-800/80 to-slate-900/60'
   return (
-    <article className={`rounded-xl border p-2.5 shadow-sm ${toneStyle}`}>
-      <p className="text-[11px] text-slate-400">{title}</p>
-      <p className="text-base font-bold mt-0.5">{value}</p>
-      <p className="text-[11px] text-slate-500 mt-0.5">{sub}</p>
+    <article className={`rounded-xl border px-2.5 py-2 shadow-sm ${toneStyle}`}>
+      <div className="flex items-center justify-between gap-2 text-xs whitespace-nowrap overflow-hidden">
+        <p className="text-slate-300 truncate">{title}</p>
+        <p className="text-sm font-bold shrink-0">{value}</p>
+        <p className="text-slate-500 truncate">{sub}</p>
+      </div>
     </article>
   )
 }
