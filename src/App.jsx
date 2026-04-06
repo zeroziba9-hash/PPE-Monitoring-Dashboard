@@ -115,9 +115,9 @@ export default function App() {
   }, [analysisState])
 
   return (
-    <div className="h-screen overflow-hidden bg-[radial-gradient(circle_at_top,#0b1b3a_0%,#020617_45%,#020617_100%)] text-slate-100 p-3 md:p-4">
-      <div className="h-full flex flex-col min-h-0 rounded-2xl border border-slate-700/80 bg-slate-950/70 backdrop-blur-md shadow-2xl shadow-black/30 p-2.5 md:p-3">
-        <section className="mb-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-2 py-1 flex items-center justify-between gap-1">
+    <div className="h-screen overflow-hidden bg-[radial-gradient(circle_at_top,#0b1b3a_0%,#020617_45%,#020617_100%)] text-slate-100 p-2.5 md:p-3">
+      <div className="h-full flex flex-col min-h-0 rounded-2xl border border-slate-700/80 bg-slate-950/70 backdrop-blur-md shadow-2xl shadow-black/30 p-2 md:p-2.5">
+        <section className="mb-1.5 rounded-xl border border-slate-700/80 bg-slate-900/80 px-2.5 py-1.5 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs">
             <span className="font-semibold">PPE CONTROL CENTER</span>
             <span className="rounded border border-indigo-400/50 bg-indigo-500/20 px-1.5 py-0.5 text-indigo-200">DEMO</span>
@@ -132,14 +132,14 @@ export default function App() {
           </div>
         </section>
 
-        <header className="mb-1 flex items-center justify-between gap-1 relative">
+        <header className="mb-1.5 flex items-end justify-between gap-2 relative">
           <div className="pointer-events-none absolute -top-8 right-0 h-24 w-40 bg-indigo-500/20 blur-3xl" />
           <div>
             <h1 className="text-[15px] md:text-base font-bold tracking-tight">PPE Monitoring Dashboard</h1>
             <p className="text-[10px] text-slate-400 mt-0">저장 영상 기반 안전모/안전조끼 착용 분석 · {scenario.name}</p>
           </div>
 
-          <div className="flex items-center gap-1 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-0.5">
             <span className="text-[11px] rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-slate-300">마지막 업데이트 {nowLabel}</span>
             <div className="flex rounded-md border border-slate-700 overflow-hidden">
               <button onClick={() => setActiveScenario('A')} className={`text-[11px] px-2 py-1.5 ${activeScenario === 'A' ? 'bg-indigo-600' : 'bg-slate-900 hover:bg-slate-800'}`}>시나리오 A</button>
@@ -151,7 +151,7 @@ export default function App() {
           </div>
         </header>
 
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-1 mb-0.5">
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-1.5 mb-1.5">
           <KpiCard title="총 탐지 인원" value={`${totalPeople}`} sub="누적 기준" />
           <KpiCard title="위반 건수" value={`${violationCount}`} sub="안전모/조끼 미착용" tone="warn" />
           <KpiCard title="준수율" value={`${complianceRate}%`} sub="분석 구간 평균" tone="good" />
@@ -165,7 +165,7 @@ export default function App() {
           </section>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-1.5 flex-1 min-h-0 mb-1">
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-2 flex-1 min-h-0 mb-1.5">
           <main className="relative grid grid-cols-1 md:grid-cols-2 md:grid-rows-2 gap-0 h-full overflow-hidden rounded-xl bg-black">
             <div className="pointer-events-none absolute inset-0 hidden md:block z-10">
               <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/25" />
@@ -175,7 +175,7 @@ export default function App() {
               const hasViolation = filteredAlerts.some((log) => log.camera === cam.name && ['helmet', 'vest', 'both'].includes(log.type))
               return (
                 <section key={cam.id} className="relative bg-black overflow-hidden">
-                  <div className="absolute left-2 right-2 top-2 z-20 flex items-center justify-between px-2 py-1 rounded-md bg-slate-900/70 border border-slate-700/70 backdrop-blur-sm">
+                  <div className="absolute left-1.5 right-1.5 top-1.5 z-20 flex items-center justify-between px-2 py-1 rounded-md bg-slate-900/70 border border-slate-700/70 backdrop-blur-sm">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{cam.name}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${cam.online ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>{cam.online ? 'ONLINE' : 'OFFLINE'}</span>
@@ -191,8 +191,8 @@ export default function App() {
             })}
           </main>
 
-          <aside className="grid grid-rows-[auto_auto_1fr] gap-1.5 h-full min-h-0">
-            <section className="rounded-xl bg-slate-900/55 border border-slate-700/80 p-2.5">
+          <aside className="grid grid-rows-[auto_auto_1fr] gap-2 h-full min-h-0">
+            <section className="rounded-xl bg-slate-900/55 border border-slate-700/80 p-2">
               <h2 className="text-xs font-semibold text-slate-300 mb-1.5">시스템 상태</h2>
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
                 <StateTile label="전체" value={cameras.length} />
@@ -201,7 +201,7 @@ export default function App() {
               </div>
             </section>
 
-            <section className="rounded-xl bg-slate-900/55 border border-slate-700/80 p-2.5">
+            <section className="rounded-xl bg-slate-900/55 border border-slate-700/80 p-2">
               <h3 className="text-[11px] text-slate-400 mb-1.5">선택 알람 상세</h3>
               {selectedAlert ? (
                 <div className="space-y-2 text-xs">
@@ -221,7 +221,7 @@ export default function App() {
               ) : <p className="text-xs text-slate-500">선택된 알람이 없습니다.</p>}
             </section>
 
-            <section className="rounded-xl bg-slate-900/55 border border-slate-700/80 p-2.5 min-h-0 flex flex-col">
+            <section className="rounded-xl bg-slate-900/55 border border-slate-700/80 p-2 min-h-0 flex flex-col">
               <div className="flex gap-2 mb-3">
                 <button onClick={() => setActiveTab('alerts')} className={`text-xs px-2 py-1 rounded-md ${activeTab === 'alerts' ? 'bg-indigo-600' : 'bg-slate-800 hover:bg-slate-700'}`}>알람 로그</button>
                 <button onClick={() => setActiveTab('history')} className={`text-xs px-2 py-1 rounded-md ${activeTab === 'history' ? 'bg-indigo-600' : 'bg-slate-800 hover:bg-slate-700'}`}>운영 히스토리</button>
@@ -267,13 +267,13 @@ export default function App() {
         </div>
 
         <section className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-2 shrink-0">
-          <div className="rounded-xl border border-slate-800 bg-slate-900 px-2.5 py-1 overflow-hidden h-[56px]">
+          <div className="rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 overflow-hidden h-[56px]">
             <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mb-0.5 leading-none">
               <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />하단 이벤트 피드
             </div>
             <div className="ticker-mask"><div className="ticker-track">{[...bottomFeed, ...bottomFeed].map((item, idx) => <div key={`${item.id}-${idx}`} className={`text-[10px] whitespace-nowrap leading-none rounded-md px-2 py-0.5 border shrink-0 ${item.level === 'critical' ? 'border-rose-500/40 bg-rose-500/10 text-rose-200' : item.level === 'warning' ? 'border-amber-500/40 bg-amber-500/10 text-amber-200' : 'border-sky-500/40 bg-sky-500/10 text-sky-200'}`}>{item.text}</div>)}</div></div>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900 px-2.5 py-1 overflow-hidden h-[56px]">
+          <div className="rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 overflow-hidden h-[56px]">
             <div className="text-[11px] text-slate-400 mb-1">System Console</div>
             <div className="space-y-0.5 text-[10px] font-mono text-slate-300 leading-tight">
               {systemEvents.map((line) => <p key={line} className="truncate">{line}</p>)}
@@ -315,10 +315,10 @@ function KpiCard({ title, value, sub, tone = 'default' }) {
   const toneStyle = tone === 'warn' ? 'border-amber-400/40 bg-gradient-to-br from-amber-500/12 to-slate-900/40' : tone === 'good' ? 'border-emerald-400/40 bg-gradient-to-br from-emerald-500/12 to-slate-900/40' : 'border-slate-700/80 bg-gradient-to-br from-slate-800/80 to-slate-900/60'
   return (
     <article className={`rounded-xl border px-2.5 py-2 shadow-sm ${toneStyle}`}>
-      <div className="flex items-center justify-between gap-2 text-xs whitespace-nowrap overflow-hidden">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-xs leading-none">
         <p className="text-slate-300 truncate">{title}</p>
         <p className="text-sm font-bold shrink-0">{value}</p>
-        <p className="text-slate-500 truncate">{sub}</p>
+        <p className="text-slate-500 truncate text-right">{sub}</p>
       </div>
     </article>
   )
