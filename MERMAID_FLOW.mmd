@@ -1,32 +1,22 @@
 flowchart LR
-    %% ===== Styles =====
-    classDef io fill:#1e293b,stroke:#60a5fa,color:#e2e8f0,stroke-width:1.5px;
-    classDef process fill:#0f172a,stroke:#94a3b8,color:#e2e8f0,stroke-width:1.2px;
-    classDef decision fill:#3f1d2e,stroke:#f472b6,color:#ffe4f1,stroke-width:1.5px;
-    classDef warn fill:#3a1f1f,stroke:#fb7185,color:#ffe4e6,stroke-width:1.5px;
-    classDef success fill:#10261a,stroke:#34d399,color:#d1fae5,stroke-width:1.5px;
-    classDef output fill:#1f2937,stroke:#22d3ee,color:#cffafe,stroke-width:1.2px;
+    A[Video Input RTSP/File] --> B[Frame Sampling 5-10 FPS]
+    B --> C[Preprocess Resize Normalize]
+    C --> D[Detection person helmet vest]
+    D --> E[Tracking Track ID]
+    E --> F[Person-PPE Matching IoU ROI]
+    F --> G{PPE Decision}
 
-    %% ===== Pipeline =====
-    A([🎥 영상 입력<br/>RTSP / 파일]):::io --> B[🧩 프레임 추출<br/>5~10 FPS 샘플링]:::process
-    B --> C[🛠️ 전처리<br/>Resize / Normalize]:::process
-    C --> D[🧠 객체 탐지<br/>person / helmet / vest]:::process
-    D --> E[🆔 객체 추적<br/>Track ID 유지]:::process
-    E --> F[🔗 사람-보호구 매칭<br/>IoU / ROI / 중심점]:::process
-    F --> G{✅ PPE 판정}:::decision
+    G -->|OK| H1[Normal Record]
+    G -->|No Helmet| H2[Violation Candidate]
+    G -->|No Vest| H2
+    G -->|No Helmet and No Vest| H2
 
-    G -->|정상| H1[🟢 정상 상태 기록]:::success
-    G -->|헬멧 미착용| H2[🟠 위반 후보]:::warn
-    G -->|조끼 미착용| H2
-    G -->|둘 다 미착용| H2
+    H2 --> I[Temporal Filter N consecutive frames]
+    I --> J{Cooldown Check}
+    J -->|Yes| K[Skip Event Accumulate only]
+    J -->|No| L[Publish Violation Event]
 
-    H2 --> I[⏱️ 시간 안정화<br/>N프레임 연속 확인]:::process
-    I --> J{🔁 쿨다운 중복 확인}:::decision
-
-    J -->|Yes| K[↩️ 이벤트 미발행<br/>카운트만 누적]:::process
-    J -->|No| L[🚨 위반 이벤트 발행]:::warn
-
-    L --> M[(📸 스냅샷 저장)]:::output
-    L --> N[(🗂️ DB/로그 저장)]:::output
-    L --> O([📡 대시보드 피드 반영]):::output
+    L --> M[(Snapshot Save)]
+    L --> N[(DB Log Save)]
+    L --> O[Dashboard Feed Update]
     H1 --> N
