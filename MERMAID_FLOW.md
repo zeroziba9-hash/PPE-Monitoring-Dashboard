@@ -1,7 +1,7 @@
-# PPE 영상 처리 파이프라인 (한글 Mermaid)
+# PPE 영상 처리 파이프라인 (정사각형용 압축 버전)
 
 ```mermaid
-flowchart LR
+flowchart TB
   classDef io fill:#0b2942,stroke:#38bdf8,color:#e0f2fe,stroke-width:2px;
   classDef prep fill:#1f2937,stroke:#94a3b8,color:#e5e7eb,stroke-width:1.5px;
   classDef ai fill:#1e1b4b,stroke:#818cf8,color:#e0e7ff,stroke-width:1.5px;
@@ -9,32 +9,30 @@ flowchart LR
   classDef alert fill:#3a1f1f,stroke:#fb7185,color:#ffe4e6,stroke-width:1.8px;
   classDef save fill:#0f2a1f,stroke:#34d399,color:#d1fae5,stroke-width:1.5px;
 
-  A([영상 입력 - RTSP / 파일]):::io --> B[프레임 샘플링 - 5~10 FPS]:::prep
-  B --> C[전처리 - Resize / Normalize]:::prep
-  C --> D[객체 탐지 - person / helmet / vest]:::ai
-  D --> E[객체 추적 - Track ID 유지]:::ai
-  E --> F[사람-보호구 매칭 - IoU / ROI]:::prep
+  A([영상 입력]):::io --> B[프레임 샘플링]:::prep
+  B --> C[전처리]:::prep
+  C --> D[객체 탐지]:::ai
+  D --> E[객체 추적]:::ai
+  E --> F[사람-보호구 매칭]:::prep
   F --> G{PPE 판정}:::rule
 
-  G -->|정상| H1[정상 상태 기록]:::save
-  G -->|헬멧 미착용| H2[위반 후보]:::alert
-  G -->|조끼 미착용| H2
-  G -->|헬멧+조끼 미착용| H2
+  G -->|정상| H1[정상 기록]:::save
+  G -->|미착용| H2[위반 후보]:::alert
 
-  H2 --> I[시간 안정화 - N프레임 연속 확인]:::prep
-  I --> J{중복 알람 쿨다운 확인}:::rule
+  H2 --> I[시간 안정화]:::prep
+  I --> J{쿨다운 확인}:::rule
 
-  J -->|예| K[이벤트 미발행 - 카운트만 누적]:::prep
+  J -->|예| K[이벤트 미발행]:::prep
   J -->|아니오| L[위반 이벤트 발행]:::alert
 
-  L --> M[(스냅샷 저장)]:::save
-  L --> N[(DB / 로그 저장)]:::save
-  L --> O([대시보드 피드 반영]):::io
+  L --> M[(스냅샷)]:::save
+  L --> N[(DB/로그)]:::save
+  L --> O([대시보드 피드]):::io
   H1 --> N
 
   linkStyle default stroke:#64748b,stroke-width:1.5px;
 ```
 
 ## VS Code
-- `.mmd`: Command Palette → `View: Show Mermaid Chart`
-- `.md`: `Ctrl+Shift+V` (Markdown Preview)
+- `.mmd`: `View: Show Mermaid Chart`
+- `.md`: `Ctrl+Shift+V`
