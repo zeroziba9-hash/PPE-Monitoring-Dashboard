@@ -16,7 +16,6 @@ flowchart TB
 
   E --> F[(DB/로그 저장)]:::save
   E --> G([대시보드 알림]):::io
-  D --> F
 
   linkStyle default stroke:#64748b,stroke-width:1.5px;
 ```
