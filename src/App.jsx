@@ -15,10 +15,10 @@ import { levelStyles } from './constants/statusStyles'
 import { fetchLatestAlerts, patchAlertStatus } from './services/alertsApi'
 
 const statusLabel = {
-  new: 'NEW',
-  acked: 'ACKED',
-  in_progress: 'IN PROGRESS',
-  resolved: 'RESOLVED',
+  new: 'UNCONFIRMED',
+  acked: 'CONFIRMING',
+  in_progress: 'ACTION IN PROGRESS',
+  resolved: 'CONFIRMED',
   unknown: 'UNKNOWN',
 }
 
@@ -109,6 +109,12 @@ export default function App() {
   )
   const scenario = demoScenario[activeScenario]
   const totalPeople = scenario.people
+  const stageLabel =
+    analysisState === 'idle'
+      ? 'Stage 1/4 · 영상 수집/분석'
+      : analysisState === 'analyzing'
+        ? 'Stage 2/4 · DB 저장/실시간 알림'
+        : 'Stage 3-4/4 · 관리자 조치/분석 완료'
 
   const filteredAlerts = useMemo(() => {
     const now = Date.now()
@@ -134,7 +140,9 @@ export default function App() {
 
   const selectedAlert = alerts.find((a) => a.id === selectedAlertId) ?? alerts[0]
   const violationCount = alerts.filter((a) => ['helmet', 'vest', 'both'].includes(a.type)).length
-  const newAlertCount = alerts.filter((a) => a.status === 'new').length
+  const resolvedCount = alerts.filter((a) => a.status === 'resolved').length
+  const pendingCount = alerts.filter((a) => a.status !== 'resolved').length
+  const completionRate = Math.round((resolvedCount / Math.max(alerts.length, 1)) * 100)
   const complianceRate = Math.max(0, 100 - Math.round((violationCount / Math.max(totalPeople, 1)) * 100))
 
   const beep = useCallback(() => {
@@ -359,6 +367,7 @@ export default function App() {
           <div>
             <h1 className="text-[15px] md:text-base font-bold tracking-tight">PPE Monitoring Dashboard</h1>
             <p className="text-[10px] text-slate-400 mt-0">저장 영상 기반 안전모/안전조끼 착용 분석 · {scenario.name}</p>
+            <span className="inline-flex mt-1 text-[10px] rounded-md border border-cyan-400/30 bg-cyan-500/15 text-cyan-200 px-2 py-0.5">{stageLabel}</span>
           </div>
 
           <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-0.5">
@@ -377,7 +386,7 @@ export default function App() {
           <KpiCard title="총 탐지 인원" value={`${totalPeople}`} sub="누적 기준" />
           <KpiCard title="위반 건수" value={`${violationCount}`} sub="안전모/조끼 미착용" tone="warn" />
           <KpiCard title="준수율" value={`${complianceRate}%`} sub="분석 구간 평균" tone="good" />
-          <KpiCard title="미확인 알람" value={`${newAlertCount}`} sub="ACK 필요" tone="warn" />
+          <KpiCard title="조치 완료율" value={`${completionRate}%`} sub={`미조치 ${pendingCount}건`} tone="good" />
         </section>
 
         {analysisState !== 'idle' && (
@@ -438,6 +447,13 @@ export default function App() {
                 <StateTile label="정상" value={onlineCount} tone="good" />
                 <StateTile label="오프라인" value={cameras.length - onlineCount} tone="bad" />
               </div>
+              <div className="mt-2 rounded-lg border border-slate-800 bg-slate-900 p-2 text-xs">
+                <p className="text-slate-400">조치 현황</p>
+                <div className="mt-1 flex items-center justify-between">
+                  <span className="text-emerald-300">완료 {resolvedCount}</span>
+                  <span className="text-amber-300">미조치 {pendingCount}</span>
+                </div>
+              </div>
             </section>
 
             <section className="rounded-xl bg-slate-900/55 border border-slate-700/80 p-2">
@@ -452,10 +468,10 @@ export default function App() {
                   <p className="text-slate-400">{selectedAlert.camera} · {selectedAlert.time}</p>
                   <p className="text-slate-400">confidence: {(selectedAlert.confidence * 100).toFixed(1)}%</p>
                   <div className="flex gap-2 pt-1 flex-wrap">
-                    <button onClick={() => openActionModal('ack')} className="text-xs px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500">ACK</button>
-                    <button onClick={() => openActionModal('assign')} className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700">Assign</button>
-                    <button onClick={() => openActionModal('incident')} className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700">Incident</button>
-                    <button onClick={() => openActionModal('resolve')} className="text-xs px-2 py-1 rounded bg-sky-700 hover:bg-sky-600">Resolve</button>
+                    <button onClick={() => openActionModal('ack')} className="text-xs px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500">확인(ACK)</button>
+                    <button onClick={() => openActionModal('assign')} className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700">담당자 지정</button>
+                    <button onClick={() => openActionModal('incident')} className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700">사건 등록</button>
+                    <button onClick={() => openActionModal('resolve')} className="text-xs px-2 py-1 rounded bg-sky-700 hover:bg-sky-600">해결 완료</button>
                   </div>
                 </div>
               ) : <p className="text-xs text-slate-500">선택된 알람이 없습니다.</p>}
@@ -554,10 +570,10 @@ export default function App() {
             <div className="grid gap-2 mb-3">
               <label className="text-xs text-slate-300">액션</label>
               <select value={actionType} onChange={(e) => setActionType(e.target.value)} className="bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-sm">
-                <option value="ack">ACK</option>
-                <option value="assign">담당자 할당</option>
-                <option value="incident">인시던트 등록</option>
-                <option value="resolve">해결 처리</option>
+                <option value="ack">확인 (ACK)</option>
+                <option value="assign">담당자 지정</option>
+                <option value="incident">사건 등록</option>
+                <option value="resolve">해결 완료</option>
               </select>
 
               <label className="text-xs text-slate-300 mt-1">처리자</label>
