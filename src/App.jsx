@@ -345,8 +345,8 @@ export default function App() {
   }, [])
 
   return (
-    <div className="h-screen overflow-hidden bg-[radial-gradient(circle_at_top,#0b1b3a_0%,#020617_45%,#020617_100%)] text-slate-100 p-2 md:p-2.5">
-      <div className="h-full flex flex-col min-h-0 rounded-2xl border border-slate-700/80 bg-slate-950/70 backdrop-blur-md shadow-2xl shadow-black/30 p-2">
+    <div className="min-h-screen overflow-y-auto bg-[radial-gradient(circle_at_top,#0b1b3a_0%,#020617_45%,#020617_100%)] text-slate-100 p-2 md:p-2.5">
+      <div className="flex flex-col rounded-2xl border border-slate-700/80 bg-slate-950/70 backdrop-blur-md shadow-2xl shadow-black/30 p-2">
         <section className="mb-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-2 py-1 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 text-[11px]">
             <span className="font-semibold">PPE CONTROL CENTER</span>
@@ -398,8 +398,8 @@ export default function App() {
           </section>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-2 flex-1 min-h-0 mb-1.5">
-          <main className="relative grid grid-cols-1 md:grid-cols-2 md:grid-rows-2 gap-0 h-full overflow-hidden rounded-xl bg-black">
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-2 mb-1.5 xl:min-h-[620px]">
+          <main className="relative grid grid-cols-1 md:grid-cols-2 md:grid-rows-2 gap-0 min-h-[420px] xl:min-h-[620px] overflow-hidden rounded-xl bg-black">
             <div className="pointer-events-none absolute inset-0 hidden md:block z-10">
               <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/25" />
               <div className="absolute top-1/2 left-0 w-full h-px -translate-y-1/2 bg-white/25" />
@@ -441,7 +441,7 @@ export default function App() {
             })}
           </main>
 
-          <aside className="grid grid-rows-[auto_minmax(0,1fr)] gap-2 h-full min-h-0">
+          <aside className="grid grid-rows-[auto_minmax(0,1fr)] gap-2 min-h-[420px] xl:min-h-[620px]">
             <section className="rounded-xl bg-slate-900/55 border border-slate-700/80 p-2">
               <h2 className="text-xs font-semibold text-slate-300 mb-1.5">시스템 상태</h2>
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
