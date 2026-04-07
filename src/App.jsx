@@ -6,13 +6,34 @@ import {
   bottomFeed,
   cameras,
   demoScenario,
-  eventHistory,
+  eventHistory as initialEventHistory,
   initialAlertLogs,
   statusChip,
   systemEvents,
 } from './data/mockData'
 import { levelStyles } from './constants/statusStyles'
-import { fetchLatestAlerts } from './services/alertsApi'
+import { fetchLatestAlerts, patchAlertStatus } from './services/alertsApi'
+
+const statusLabel = {
+  new: 'NEW',
+  acked: 'ACKED',
+  in_progress: 'IN PROGRESS',
+  resolved: 'RESOLVED',
+}
+
+const statusBadgeStyle = {
+  new: 'bg-rose-500/20 text-rose-300',
+  acked: 'bg-emerald-500/20 text-emerald-300',
+  in_progress: 'bg-amber-500/20 text-amber-300',
+  resolved: 'bg-sky-500/20 text-sky-300',
+}
+
+const actionToStatus = {
+  ack: 'acked',
+  assign: 'in_progress',
+  incident: 'in_progress',
+  resolve: 'resolved',
+}
 
 export default function App() {
   const [selected, setSelected] = useState(null)
@@ -26,6 +47,12 @@ export default function App() {
   const [selectedAlertId, setSelectedAlertId] = useState(initialAlertLogs[0].id)
   const [alertsLoading, setAlertsLoading] = useState(false)
   const [alertsError, setAlertsError] = useState('')
+  const [opsHistory, setOpsHistory] = useState(initialEventHistory)
+  const [showActionModal, setShowActionModal] = useState(false)
+  const [actionType, setActionType] = useState('ack')
+  const [assignee, setAssignee] = useState('admin01')
+  const [actionNote, setActionNote] = useState('')
+  const [actionSaving, setActionSaving] = useState(false)
 
   const nowLabel = useMemo(
     () =>
@@ -51,10 +78,6 @@ export default function App() {
   const violationCount = alerts.filter((a) => ['helmet', 'vest', 'both'].includes(a.type)).length
   const newAlertCount = alerts.filter((a) => a.status === 'new').length
   const complianceRate = Math.max(0, 100 - Math.round((violationCount / Math.max(totalPeople, 1)) * 100))
-
-  const ackAlert = (id) => {
-    setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'acked' } : a)))
-  }
 
   const startMockAnalysis = () => {
     setAnalysisState('analyzing')
@@ -85,6 +108,65 @@ export default function App() {
       setAlertsError('API 연결 실패 · Mock 데이터로 동작 중')
     } finally {
       setAlertsLoading(false)
+    }
+  }
+
+  const openActionModal = (type) => {
+    setActionType(type)
+    setActionNote('')
+    setShowActionModal(true)
+  }
+
+  const applyAlertAction = async () => {
+    if (!selectedAlert) return
+
+    const nextStatus = actionToStatus[actionType] ?? 'acked'
+    const actionName =
+      actionType === 'ack'
+        ? '알람 확인 처리'
+        : actionType === 'assign'
+          ? '담당자 할당'
+          : actionType === 'incident'
+            ? '인시던트 등록'
+            : '해결 처리'
+
+    setActionSaving(true)
+
+    try {
+      await patchAlertStatus(selectedAlert.id, {
+        status: nextStatus,
+        assignee,
+        note: actionNote,
+        actionType,
+      })
+    } catch {
+      setAlertsError('상태 변경 API 실패 · 로컬 상태로 반영됨')
+    } finally {
+      const time = new Date().toTimeString().slice(0, 5)
+
+      setAlerts((prev) =>
+        prev.map((a) =>
+          a.id === selectedAlert.id
+            ? {
+                ...a,
+                status: nextStatus,
+              }
+            : a,
+        ),
+      )
+
+      setOpsHistory((prev) => [
+        {
+          id: Date.now(),
+          time,
+          action: `${actionName}${actionNote ? ` · ${actionNote}` : ''}`,
+          actor: assignee,
+        },
+        ...prev,
+      ])
+
+      setActionSaving(false)
+      setShowActionModal(false)
     }
   }
 
@@ -156,7 +238,7 @@ export default function App() {
               <div className="absolute top-1/2 left-0 w-full h-px -translate-y-1/2 bg-white/25" />
             </div>
             {cameras.map((cam) => {
-              const hasViolation = filteredAlerts.some((log) => log.camera === cam.name && ['helmet', 'vest', 'both'].includes(log.type))
+              const hasViolation = filteredAlerts.some((log) => log.camera === cam.name && ['helmet', 'vest', 'both'].includes(log.type) && log.status !== 'resolved')
               return (
                 <section key={cam.id} className="relative bg-black overflow-hidden">
                   <div className="absolute left-1.5 right-1.5 top-1.5 z-20 flex items-center justify-between px-2 py-1 rounded-md bg-slate-900/70 border border-slate-700/70 backdrop-blur-sm">
@@ -191,15 +273,16 @@ export default function App() {
                 <div className="space-y-2 text-xs">
                   <div className="flex items-center justify-between">
                     <span className={`px-2 py-0.5 rounded-full ${levelStyles[selectedAlert.level]}`}>{selectedAlert.level.toUpperCase()}</span>
-                    <span className="text-slate-400">{selectedAlert.time}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] ${statusBadgeStyle[selectedAlert.status]}`}>{statusLabel[selectedAlert.status]}</span>
                   </div>
                   <p className="text-sm">{selectedAlert.message}</p>
-                  <p className="text-slate-400">{selectedAlert.camera}</p>
+                  <p className="text-slate-400">{selectedAlert.camera} · {selectedAlert.time}</p>
                   <p className="text-slate-400">confidence: {(selectedAlert.confidence * 100).toFixed(1)}%</p>
-                  <div className="flex gap-2 pt-1">
-                    <button onClick={() => ackAlert(selectedAlert.id)} className="text-xs px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500">ACK</button>
-                    <button className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700">Assign</button>
-                    <button className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700">Incident</button>
+                  <div className="flex gap-2 pt-1 flex-wrap">
+                    <button onClick={() => openActionModal('ack')} className="text-xs px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500">ACK</button>
+                    <button onClick={() => openActionModal('assign')} className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700">Assign</button>
+                    <button onClick={() => openActionModal('incident')} className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700">Incident</button>
+                    <button onClick={() => openActionModal('resolve')} className="text-xs px-2 py-1 rounded bg-sky-700 hover:bg-sky-600">Resolve</button>
                   </div>
                 </div>
               ) : <p className="text-xs text-slate-500">선택된 알람이 없습니다.</p>}
@@ -230,7 +313,7 @@ export default function App() {
                         <div className="flex items-center justify-between gap-2">
                           <span className={`text-[11px] px-2 py-0.5 rounded-full ${levelStyles[log.level]}`}>{log.level.toUpperCase()}</span>
                           <div className="flex items-center gap-1">
-                            {log.status === 'new' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300">NEW</span>}
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${statusBadgeStyle[log.status]}`}>{statusLabel[log.status]}</span>
                             <span className="text-xs text-slate-400">{log.time}</span>
                           </div>
                         </div>
@@ -242,7 +325,7 @@ export default function App() {
                 </>
               ) : (
                 <ul className="space-y-2 overflow-auto pr-1">
-                  {eventHistory.map((event) => (
+                  {opsHistory.map((event) => (
                     <li key={event.id} className="rounded-lg bg-slate-900 border border-slate-800 p-2">
                       <div className="text-xs text-slate-400">{event.time}</div>
                       <div className="text-sm mt-0.5">{event.action}</div>
@@ -270,6 +353,36 @@ export default function App() {
           </div>
         </section>
       </div>
+
+      {showActionModal && selectedAlert && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setShowActionModal(false)}>
+          <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-semibold mb-3">상황 처리</h3>
+            <p className="text-xs text-slate-400 mb-2">대상: {selectedAlert.camera} · {selectedAlert.message}</p>
+
+            <div className="grid gap-2 mb-3">
+              <label className="text-xs text-slate-300">액션</label>
+              <select value={actionType} onChange={(e) => setActionType(e.target.value)} className="bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-sm">
+                <option value="ack">ACK</option>
+                <option value="assign">담당자 할당</option>
+                <option value="incident">인시던트 등록</option>
+                <option value="resolve">해결 처리</option>
+              </select>
+
+              <label className="text-xs text-slate-300 mt-1">처리자</label>
+              <input value={assignee} onChange={(e) => setAssignee(e.target.value)} className="bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+
+              <label className="text-xs text-slate-300 mt-1">메모</label>
+              <textarea value={actionNote} onChange={(e) => setActionNote(e.target.value)} rows={3} className="bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-sm" placeholder="조치 내용을 입력하세요" />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowActionModal(false)} className="text-xs px-3 py-2 rounded bg-slate-800 hover:bg-slate-700">취소</button>
+              <button onClick={applyAlertAction} disabled={actionSaving} className="text-xs px-3 py-2 rounded bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700">{actionSaving ? '저장 중...' : '저장'}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showDoneModal && (
         <div className="fixed inset-0 bg-black/70 z-40 flex items-center justify-center p-4" onClick={() => setShowDoneModal(false)}>
