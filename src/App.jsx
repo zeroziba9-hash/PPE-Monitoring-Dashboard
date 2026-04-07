@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import KpiCard from './components/KpiCard'
 import FilterButton from './components/FilterButton'
 import StateTile from './components/StateTile'
@@ -19,6 +19,7 @@ const statusLabel = {
   acked: 'ACKED',
   in_progress: 'IN PROGRESS',
   resolved: 'RESOLVED',
+  unknown: 'UNKNOWN',
 }
 
 const statusBadgeStyle = {
@@ -26,6 +27,7 @@ const statusBadgeStyle = {
   acked: 'bg-emerald-500/20 text-emerald-300',
   in_progress: 'bg-amber-500/20 text-amber-300',
   resolved: 'bg-sky-500/20 text-sky-300',
+  unknown: 'bg-slate-500/20 text-slate-300',
 }
 
 const actionToStatus = {
@@ -33,6 +35,27 @@ const actionToStatus = {
   assign: 'in_progress',
   incident: 'in_progress',
   resolve: 'resolved',
+}
+
+const validStatus = new Set(['new', 'acked', 'in_progress', 'resolved'])
+
+const normalizeAlert = (a) => {
+  if (!a || typeof a !== 'object') return null
+  if (a.id === undefined || a.id === null) return null
+
+  const status = validStatus.has(a.status) ? a.status : 'unknown'
+
+  return {
+    id: a.id,
+    level: a.level || 'info',
+    type: a.type || 'ok',
+    time: a.time || '--:--:--',
+    camera: a.camera || 'Unknown camera',
+    message: a.message || 'No message',
+    confidence: Number.isFinite(a.confidence) ? a.confidence : 0,
+    status,
+    createdAt: a.createdAt || Date.now(),
+  }
 }
 
 export default function App() {
@@ -43,7 +66,7 @@ export default function App() {
   const [progress, setProgress] = useState(0)
   const [activeScenario, setActiveScenario] = useState('A')
   const [showDoneModal, setShowDoneModal] = useState(false)
-  const [alerts, setAlerts] = useState(initialAlertLogs)
+  const [alerts, setAlerts] = useState(initialAlertLogs.map(normalizeAlert).filter(Boolean))
   const [selectedAlertId, setSelectedAlertId] = useState(initialAlertLogs[0].id)
   const [alertsLoading, setAlertsLoading] = useState(false)
   const [alertsError, setAlertsError] = useState('')
@@ -53,6 +76,15 @@ export default function App() {
   const [assignee, setAssignee] = useState('admin01')
   const [actionNote, setActionNote] = useState('')
   const [actionSaving, setActionSaving] = useState(false)
+  const [hideResolved, setHideResolved] = useState(true)
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [timeRange, setTimeRange] = useState('24h')
+  const [lastSuccessAt, setLastSuccessAt] = useState('')
+  const [toast, setToast] = useState('')
+  const [incidentTitle, setIncidentTitle] = useState('PPE 위반 인시던트')
+  const [incidentSeverity, setIncidentSeverity] = useState('high')
+
+  const previousNewCountRef = useRef(0)
 
   const nowLabel = useMemo(
     () =>
@@ -70,14 +102,65 @@ export default function App() {
   const totalPeople = scenario.people
 
   const filteredAlerts = useMemo(() => {
-    if (alertFilter === 'all') return alerts
-    return alerts.filter((log) => log.type === alertFilter)
-  }, [alertFilter, alerts])
+    const now = Date.now()
+    const oneHour = 60 * 60 * 1000
+    const twentyFourHour = 24 * oneHour
+
+    return alerts
+      .filter((log) => (alertFilter === 'all' ? true : log.type === alertFilter))
+      .filter((log) => (hideResolved ? log.status !== 'resolved' : true))
+      .filter((log) => {
+        if (timeRange === 'all') return true
+        const age = now - (log.createdAt || now)
+        if (timeRange === '1h') return age <= oneHour
+        if (timeRange === '24h') return age <= twentyFourHour
+        return true
+      })
+      .filter((log) => {
+        if (!searchKeyword.trim()) return true
+        const q = searchKeyword.toLowerCase()
+        return `${log.camera} ${log.message}`.toLowerCase().includes(q)
+      })
+  }, [alertFilter, alerts, hideResolved, timeRange, searchKeyword])
 
   const selectedAlert = alerts.find((a) => a.id === selectedAlertId) ?? alerts[0]
   const violationCount = alerts.filter((a) => ['helmet', 'vest', 'both'].includes(a.type)).length
   const newAlertCount = alerts.filter((a) => a.status === 'new').length
   const complianceRate = Math.max(0, 100 - Math.round((violationCount / Math.max(totalPeople, 1)) * 100))
+
+  const beep = useCallback(() => {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+      const oscillator = audioCtx.createOscillator()
+      const gain = audioCtx.createGain()
+      oscillator.connect(gain)
+      gain.connect(audioCtx.destination)
+      oscillator.type = 'sine'
+      oscillator.frequency.value = 880
+      gain.gain.value = 0.03
+      oscillator.start()
+      setTimeout(() => {
+        oscillator.stop()
+        audioCtx.close()
+      }, 180)
+    } catch {
+      // ignore sound failures
+    }
+  }, [])
+
+  const notifyNewAlert = useCallback((countDiff) => {
+    if (countDiff <= 0) return
+    setToast(`새 알람 ${countDiff}건 발생`)
+    beep()
+
+    if ('Notification' in window) {
+      if (Notification.permission === 'granted') {
+        new Notification('PPE 새 알람', { body: `새 알람 ${countDiff}건이 감지되었습니다.` })
+      } else if (Notification.permission === 'default') {
+        Notification.requestPermission()
+      }
+    }
+  }, [beep])
 
   const startMockAnalysis = () => {
     setAnalysisState('analyzing')
@@ -95,21 +178,43 @@ export default function App() {
     }, activeScenario === 'A' ? 180 : 220)
   }
 
-  const loadAlerts = async () => {
+  const loadAlerts = useCallback(async () => {
     setAlertsLoading(true)
     setAlertsError('')
-    try {
-      const latest = await fetchLatestAlerts()
-      if (latest.length > 0) {
-        setAlerts(latest)
-        setSelectedAlertId(latest[0].id)
+
+    let retries = 2
+    let waitMs = 400
+
+    while (retries >= 0) {
+      try {
+        const latest = await fetchLatestAlerts()
+        const normalized = latest.map(normalizeAlert).filter(Boolean)
+
+        if (normalized.length > 0) {
+          setAlerts(normalized)
+          setSelectedAlertId((prev) => prev ?? normalized[0].id)
+        }
+
+        const nowNewCount = normalized.filter((a) => a.status === 'new').length
+        const diff = nowNewCount - previousNewCountRef.current
+        previousNewCountRef.current = nowNewCount
+        notifyNewAlert(diff)
+
+        setLastSuccessAt(new Date().toLocaleTimeString('ko-KR', { hour12: false }))
+        setAlertsLoading(false)
+        return
+      } catch {
+        if (retries === 0) {
+          setAlertsError('API 연결 실패 · Mock 데이터로 동작 중')
+          setAlertsLoading(false)
+          return
+        }
+        await new Promise((r) => setTimeout(r, waitMs))
+        waitMs *= 2
+        retries -= 1
       }
-    } catch {
-      setAlertsError('API 연결 실패 · Mock 데이터로 동작 중')
-    } finally {
-      setAlertsLoading(false)
     }
-  }
+  }, [notifyNewAlert])
 
   const openActionModal = (type) => {
     setActionType(type)
@@ -138,6 +243,7 @@ export default function App() {
         assignee,
         note: actionNote,
         actionType,
+        incident: actionType === 'incident' ? { title: incidentTitle, severity: incidentSeverity } : undefined,
       })
     } catch {
       setAlertsError('상태 변경 API 실패 · 로컬 상태로 반영됨')
@@ -159,7 +265,10 @@ export default function App() {
         {
           id: Date.now(),
           time,
-          action: `${actionName}${actionNote ? ` · ${actionNote}` : ''}`,
+          action:
+            actionType === 'incident'
+              ? `${actionName} · ${incidentTitle} (${incidentSeverity})${actionNote ? ` · ${actionNote}` : ''}`
+              : `${actionName}${actionNote ? ` · ${actionNote}` : ''}`,
           actor: assignee,
         },
         ...prev,
@@ -178,7 +287,15 @@ export default function App() {
 
   useEffect(() => {
     loadAlerts()
-  }, [])
+    const timer = setInterval(loadAlerts, 10000)
+    return () => clearInterval(timer)
+  }, [loadAlerts])
+
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(''), 2400)
+    return () => clearTimeout(t)
+  }, [toast])
 
   return (
     <div className="h-screen overflow-hidden bg-[radial-gradient(circle_at_top,#0b1b3a_0%,#020617_45%,#020617_100%)] text-slate-100 p-2.5 md:p-3">
@@ -207,6 +324,7 @@ export default function App() {
 
           <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-0.5">
             <span className="text-[11px] rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-slate-300">마지막 업데이트 {nowLabel}</span>
+            {lastSuccessAt && <span className="text-[11px] rounded-md border border-emerald-700/40 bg-emerald-900/20 px-2 py-1.5 text-emerald-300">API 성공 {lastSuccessAt}</span>}
             <div className="flex rounded-md border border-slate-700 overflow-hidden">
               <button onClick={() => setActiveScenario('A')} className={`text-[11px] px-2 py-1.5 ${activeScenario === 'A' ? 'bg-indigo-600' : 'bg-slate-900 hover:bg-slate-800'}`}>시나리오 A</button>
               <button onClick={() => setActiveScenario('B')} className={`text-[11px] px-2 py-1.5 border-l border-slate-700 ${activeScenario === 'B' ? 'bg-indigo-600' : 'bg-slate-900 hover:bg-slate-800'}`}>시나리오 B</button>
@@ -272,8 +390,8 @@ export default function App() {
               {selectedAlert ? (
                 <div className="space-y-2 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className={`px-2 py-0.5 rounded-full ${levelStyles[selectedAlert.level]}`}>{selectedAlert.level.toUpperCase()}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] ${statusBadgeStyle[selectedAlert.status]}`}>{statusLabel[selectedAlert.status]}</span>
+                    <span className={`px-2 py-0.5 rounded-full ${levelStyles[selectedAlert.level] || levelStyles.info}`}>{selectedAlert.level.toUpperCase()}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] ${statusBadgeStyle[selectedAlert.status] || statusBadgeStyle.unknown}`}>{statusLabel[selectedAlert.status] || statusLabel.unknown}</span>
                   </div>
                   <p className="text-sm">{selectedAlert.message}</p>
                   <p className="text-slate-400">{selectedAlert.camera} · {selectedAlert.time}</p>
@@ -306,14 +424,26 @@ export default function App() {
                     <FilterButton label="둘 다" value="both" current={alertFilter} onChange={setAlertFilter} />
                     {alertsLoading && <span className="text-[10px] text-slate-400">불러오는 중...</span>}
                   </div>
+                  <div className="flex gap-2 mb-2 flex-wrap items-center">
+                    <input value={searchKeyword} onChange={(e) => setSearchKeyword(e.target.value)} placeholder="카메라/메시지 검색" className="text-xs bg-slate-800 border border-slate-700 rounded px-2 py-1" />
+                    <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} className="text-xs bg-slate-800 border border-slate-700 rounded px-2 py-1">
+                      <option value="1h">최근 1시간</option>
+                      <option value="24h">최근 24시간</option>
+                      <option value="all">전체</option>
+                    </select>
+                    <label className="text-xs inline-flex items-center gap-1">
+                      <input type="checkbox" checked={hideResolved} onChange={(e) => setHideResolved(e.target.checked)} />
+                      resolved 숨기기
+                    </label>
+                  </div>
                   {alertsError && <p className="text-[10px] text-amber-300 mb-2">{alertsError}</p>}
                   <ul className="space-y-2 overflow-auto pr-1">
                     {filteredAlerts.map((log) => (
                       <li key={log.id} onClick={() => setSelectedAlertId(log.id)} className={`rounded-lg border p-2 cursor-pointer ${selectedAlertId === log.id ? 'border-indigo-500 bg-slate-800' : 'border-slate-800 bg-slate-900'}`}>
                         <div className="flex items-center justify-between gap-2">
-                          <span className={`text-[11px] px-2 py-0.5 rounded-full ${levelStyles[log.level]}`}>{log.level.toUpperCase()}</span>
+                          <span className={`text-[11px] px-2 py-0.5 rounded-full ${levelStyles[log.level] || levelStyles.info}`}>{log.level.toUpperCase()}</span>
                           <div className="flex items-center gap-1">
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${statusBadgeStyle[log.status]}`}>{statusLabel[log.status]}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${statusBadgeStyle[log.status] || statusBadgeStyle.unknown}`}>{statusLabel[log.status] || statusLabel.unknown}</span>
                             <span className="text-xs text-slate-400">{log.time}</span>
                           </div>
                         </div>
@@ -354,6 +484,12 @@ export default function App() {
         </section>
       </div>
 
+      {toast && (
+        <div className="fixed right-4 top-4 z-[60] rounded-md border border-indigo-400/40 bg-indigo-500/20 px-3 py-2 text-xs text-indigo-100">
+          {toast}
+        </div>
+      )}
+
       {showActionModal && selectedAlert && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setShowActionModal(false)}>
           <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-4" onClick={(e) => e.stopPropagation()}>
@@ -371,6 +507,20 @@ export default function App() {
 
               <label className="text-xs text-slate-300 mt-1">처리자</label>
               <input value={assignee} onChange={(e) => setAssignee(e.target.value)} className="bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+
+              {actionType === 'incident' && (
+                <>
+                  <label className="text-xs text-slate-300 mt-1">인시던트 제목</label>
+                  <input value={incidentTitle} onChange={(e) => setIncidentTitle(e.target.value)} className="bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-sm" />
+                  <label className="text-xs text-slate-300 mt-1">심각도</label>
+                  <select value={incidentSeverity} onChange={(e) => setIncidentSeverity(e.target.value)} className="bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-sm">
+                    <option value="low">low</option>
+                    <option value="medium">medium</option>
+                    <option value="high">high</option>
+                    <option value="critical">critical</option>
+                  </select>
+                </>
+              )}
 
               <label className="text-xs text-slate-300 mt-1">메모</label>
               <textarea value={actionNote} onChange={(e) => setActionNote(e.target.value)} rows={3} className="bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-sm" placeholder="조치 내용을 입력하세요" />
