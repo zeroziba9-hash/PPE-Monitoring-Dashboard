@@ -439,7 +439,7 @@ export default function App() {
             })}
           </main>
 
-          <aside className="grid grid-rows-[auto_auto_1fr] gap-2 h-full min-h-0">
+          <aside className="grid grid-rows-[auto_minmax(0,1fr)] gap-2 h-full min-h-0">
             <section className="rounded-xl bg-slate-900/55 border border-slate-700/80 p-2">
               <h2 className="text-xs font-semibold text-slate-300 mb-1.5">시스템 상태</h2>
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
@@ -456,27 +456,6 @@ export default function App() {
               </div>
             </section>
 
-            <section className="rounded-xl bg-slate-900/55 border border-slate-700/80 p-2">
-              <h3 className="text-[11px] text-slate-400 mb-1.5">선택 알람 상세</h3>
-              {selectedAlert ? (
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className={`px-2 py-0.5 rounded-full ${levelStyles[selectedAlert.level] || levelStyles.info}`}>{selectedAlert.level.toUpperCase()}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] ${statusBadgeStyle[selectedAlert.status] || statusBadgeStyle.unknown}`}>{statusLabel[selectedAlert.status] || statusLabel.unknown}</span>
-                  </div>
-                  <p className="text-sm">{selectedAlert.message}</p>
-                  <p className="text-slate-400">{selectedAlert.camera} · {selectedAlert.time}</p>
-                  <p className="text-slate-400">confidence: {(selectedAlert.confidence * 100).toFixed(1)}%</p>
-                  <div className="flex gap-2 pt-1 flex-wrap">
-                    <button onClick={() => openActionModal('ack')} className="text-xs px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500">확인(ACK)</button>
-                    <button onClick={() => openActionModal('assign')} className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700">담당자 지정</button>
-                    <button onClick={() => openActionModal('incident')} className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700">사건 등록</button>
-                    <button onClick={() => openActionModal('resolve')} className="text-xs px-2 py-1 rounded bg-sky-700 hover:bg-sky-600">해결 완료</button>
-                  </div>
-                </div>
-              ) : <p className="text-xs text-slate-500">선택된 알람이 없습니다.</p>}
-            </section>
-
             <section className="rounded-xl bg-slate-900/55 border border-slate-700/80 p-2 min-h-0 flex flex-col">
               <div className="flex gap-2 mb-2 items-center justify-between">
                 <div className="flex gap-2">
@@ -488,6 +467,22 @@ export default function App() {
 
               {activeTab === 'alerts' ? (
                 <>
+                  {selectedAlert && (
+                    <div className="mb-2 rounded-lg border border-slate-800 bg-slate-900 p-2 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={`px-2 py-0.5 rounded-full ${levelStyles[selectedAlert.level] || levelStyles.info}`}>{selectedAlert.level.toUpperCase()}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] ${statusBadgeStyle[selectedAlert.status] || statusBadgeStyle.unknown}`}>{statusLabel[selectedAlert.status] || statusLabel.unknown}</span>
+                      </div>
+                      <p className="text-sm mt-1">{selectedAlert.message}</p>
+                      <p className="text-slate-400 mt-0.5">{selectedAlert.camera} · {selectedAlert.time} · confidence {(selectedAlert.confidence * 100).toFixed(1)}%</p>
+                      <div className="flex gap-2 pt-2 flex-wrap">
+                        <button onClick={() => openActionModal('ack')} className="text-xs px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500">확인(ACK)</button>
+                        <button onClick={() => openActionModal('assign')} className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700">담당자 지정</button>
+                        <button onClick={() => openActionModal('incident')} className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700">사건 등록</button>
+                        <button onClick={() => openActionModal('resolve')} className="text-xs px-2 py-1 rounded bg-sky-700 hover:bg-sky-600">해결 완료</button>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex gap-2 mb-2 flex-wrap items-center">
                     <FilterButton label="전체" value="all" current={alertFilter} onChange={setAlertFilter} />
                     <FilterButton label="안전모" value="helmet" current={alertFilter} onChange={setAlertFilter} />
@@ -508,7 +503,7 @@ export default function App() {
                     </label>
                   </div>
                   {alertsError && <p className="text-[10px] text-amber-300 mb-2">{alertsError}</p>}
-                  <ul className="space-y-2 overflow-auto pr-1">
+                  <ul className="space-y-2 overflow-auto min-h-0 pr-1">
                     {filteredAlerts.map((log) => (
                       <li key={log.id} onClick={() => setSelectedAlertId(log.id)} className={`rounded-lg border p-2 cursor-pointer ${selectedAlertId === log.id ? 'border-indigo-500 bg-slate-800' : 'border-slate-800 bg-slate-900'}`}>
                         <div className="flex items-center justify-between gap-2">
@@ -525,7 +520,7 @@ export default function App() {
                   </ul>
                 </>
               ) : (
-                <ul className="space-y-2 overflow-auto pr-1">
+                <ul className="space-y-2 overflow-auto min-h-0 pr-1">
                   {opsHistory.map((event) => (
                     <li key={event.id} className="rounded-lg bg-slate-900 border border-slate-800 p-2">
                       <div className="text-xs text-slate-400">{event.time}</div>
