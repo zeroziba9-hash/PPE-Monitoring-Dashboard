@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import KpiCard from './components/KpiCard'
 import FilterButton from './components/FilterButton'
 import StateTile from './components/StateTile'
+import ViolationActionPage from './components/ViolationActionPage'
 import {
   bottomFeed,
   cameras,
@@ -60,6 +61,7 @@ const normalizeAlert = (a) => {
 
 export default function App() {
   const [selected, setSelected] = useState(null)
+  const [pageMode, setPageMode] = useState('dashboard')
   const [activeTab, setActiveTab] = useState('alerts')
   const [alertFilter, setAlertFilter] = useState('all')
   const [analysisState, setAnalysisState] = useState('idle')
@@ -344,6 +346,10 @@ export default function App() {
     }
   }, [])
 
+  if (pageMode === 'action') {
+    return <ViolationActionPage onBack={() => setPageMode('dashboard')} />
+  }
+
   return (
     <div className="min-h-screen overflow-y-auto bg-[radial-gradient(circle_at_top,#0b1b3a_0%,#020617_45%,#020617_100%)] text-slate-100 p-2 md:p-2.5">
       <div className="flex flex-col rounded-2xl border border-slate-700/80 bg-slate-950/70 backdrop-blur-md shadow-2xl shadow-black/30 p-2">
@@ -359,6 +365,7 @@ export default function App() {
               </span>
             ))}
             <span className="rounded border border-slate-700 bg-slate-950 px-1 py-0.5">Op admin01</span>
+            <button onClick={() => setPageMode('action')} className="rounded border border-cyan-500/50 bg-cyan-500/15 px-1.5 py-0.5 text-[10px] text-cyan-200 hover:bg-cyan-500/25">조치 작성 페이지</button>
           </div>
         </section>
 
