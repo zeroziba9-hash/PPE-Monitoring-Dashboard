@@ -345,44 +345,46 @@ export default function App() {
   }, [])
 
   return (
-    <div className="h-screen overflow-hidden bg-[radial-gradient(circle_at_top,#0b1b3a_0%,#020617_45%,#020617_100%)] text-slate-100 p-2.5 md:p-3">
-      <div className="h-full flex flex-col min-h-0 rounded-2xl border border-slate-700/80 bg-slate-950/70 backdrop-blur-md shadow-2xl shadow-black/30 p-2 md:p-2.5">
-        <section className="mb-1.5 rounded-xl border border-slate-700/80 bg-slate-900/80 px-2.5 py-1.5 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-xs">
+    <div className="h-screen overflow-hidden bg-[radial-gradient(circle_at_top,#0b1b3a_0%,#020617_45%,#020617_100%)] text-slate-100 p-2 md:p-2.5">
+      <div className="h-full flex flex-col min-h-0 rounded-2xl border border-slate-700/80 bg-slate-950/70 backdrop-blur-md shadow-2xl shadow-black/30 p-2">
+        <section className="mb-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-2 py-1 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-[11px]">
             <span className="font-semibold">PPE CONTROL CENTER</span>
-            <span className="rounded border border-indigo-400/50 bg-indigo-500/20 px-1.5 py-0.5 text-indigo-200">DEMO</span>
+            <span className="rounded border border-indigo-400/50 bg-indigo-500/20 px-1 py-0.5 text-[10px] text-indigo-200">DEMO</span>
           </div>
-          <div className="flex items-center gap-1 text-[11px] text-slate-300">
+          <div className="flex items-center gap-1 text-[10px] text-slate-300">
             {statusChip.map((chip) => (
               <span key={chip.name} className="rounded border border-slate-700 bg-slate-950 px-1.5 py-0.5">
                 {chip.name}: <b className="text-emerald-300">{chip.value}</b>
               </span>
             ))}
-            <span className="rounded border border-slate-700 bg-slate-950 px-1.5 py-0.5">Operator: admin01</span>
+            <span className="rounded border border-slate-700 bg-slate-950 px-1 py-0.5">Op admin01</span>
           </div>
         </section>
 
-        <header className="mb-1.5 flex items-end justify-between gap-2 relative">
+        <header className="mb-1 flex items-end justify-between gap-2 relative">
           <div className="pointer-events-none absolute -top-8 right-0 h-24 w-40 bg-indigo-500/20 blur-3xl" />
           <div>
-            <h1 className="text-[15px] md:text-base font-bold tracking-tight">PPE Monitoring Dashboard</h1>
-            <p className="text-[10px] text-slate-400 mt-0">저장 영상 기반 안전모/안전조끼 착용 분석 · {scenario.name}</p>
-            <span className="inline-flex mt-1 text-[10px] rounded-md border border-cyan-400/30 bg-cyan-500/15 text-cyan-200 px-2 py-0.5">{stageLabel}</span>
+            <div className="flex items-center gap-2">
+              <h1 className="text-[14px] md:text-[15px] font-bold tracking-tight">PPE Monitoring Dashboard</h1>
+              <span className="inline-flex text-[10px] rounded-md border border-cyan-400/30 bg-cyan-500/15 text-cyan-200 px-1.5 py-0.5">{stageLabel}</span>
+            </div>
+            <p className="text-[10px] text-slate-400 mt-0">저장 영상 기반 분석 · {scenario.name}</p>
           </div>
 
-          <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-0.5">
-            <span className="text-[11px] rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-slate-300">마지막 업데이트 {nowLabel}</span>
-            {lastSuccessAt && <span className="text-[11px] rounded-md border border-emerald-700/40 bg-emerald-900/20 px-2 py-1.5 text-emerald-300">API 성공 {lastSuccessAt}</span>}
+          <div className="flex items-center gap-1 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-0.5">
+            <span className="text-[10px] rounded-md border border-slate-700 bg-slate-900 px-1.5 py-1 text-slate-300">업데이트 {nowLabel.split(' ').pop()}</span>
+            {lastSuccessAt && <span className="text-[10px] rounded-md border border-emerald-700/40 bg-emerald-900/20 px-1.5 py-1 text-emerald-300">API {lastSuccessAt}</span>}
             <div className="flex rounded-md border border-slate-700 overflow-hidden">
-              <button onClick={() => setActiveScenario('A')} className={`text-[11px] px-2 py-1.5 ${activeScenario === 'A' ? 'bg-indigo-600' : 'bg-slate-900 hover:bg-slate-800'}`}>시나리오 A</button>
-              <button onClick={() => setActiveScenario('B')} className={`text-[11px] px-2 py-1.5 border-l border-slate-700 ${activeScenario === 'B' ? 'bg-indigo-600' : 'bg-slate-900 hover:bg-slate-800'}`}>시나리오 B</button>
+              <button onClick={() => setActiveScenario('A')} className={`text-[10px] px-1.5 py-1 ${activeScenario === 'A' ? 'bg-indigo-600' : 'bg-slate-900 hover:bg-slate-800'}`}>A</button>
+              <button onClick={() => setActiveScenario('B')} className={`text-[10px] px-1.5 py-1 border-l border-slate-700 ${activeScenario === 'B' ? 'bg-indigo-600' : 'bg-slate-900 hover:bg-slate-800'}`}>B</button>
             </div>
-            <button onClick={startMockAnalysis} className="text-[11px] px-2.5 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-600/20">분석 시작</button>
-            <button disabled={analysisState !== 'done'} className="text-[11px] px-2.5 py-1.5 rounded-md bg-emerald-600/90 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-400">결과 다운로드</button>
+            <button onClick={startMockAnalysis} className="text-[10px] px-2 py-1 rounded-md bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-600/20">분석 시작</button>
+            <button disabled={analysisState !== 'done'} className="text-[10px] px-2 py-1 rounded-md bg-emerald-600/90 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-400">결과</button>
           </div>
         </header>
 
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-1.5 mb-1.5">
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-1 mb-1">
           <KpiCard title="총 탐지 인원" value={`${totalPeople}`} sub="누적 기준" />
           <KpiCard title="위반 건수" value={`${violationCount}`} sub="안전모/조끼 미착용" tone="warn" />
           <KpiCard title="준수율" value={`${complianceRate}%`} sub="분석 구간 평균" tone="good" />
