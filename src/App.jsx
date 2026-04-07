@@ -83,8 +83,14 @@ export default function App() {
   const [toast, setToast] = useState('')
   const [incidentTitle, setIncidentTitle] = useState('PPE 위반 인시던트')
   const [incidentSeverity, setIncidentSeverity] = useState('high')
+  const [cameraStreams, setCameraStreams] = useState(() =>
+    Object.fromEntries(
+      cameras.map((cam) => [cam.id, { url: cam.url, online: cam.online, source: 'demo' }]),
+    ),
+  )
 
   const previousNewCountRef = useRef(0)
+  const uploadedUrlRef = useRef({})
 
   const nowLabel = useMemo(
     () =>
@@ -97,7 +103,10 @@ export default function App() {
     [],
   )
 
-  const onlineCount = useMemo(() => cameras.filter((c) => c.online).length, [])
+  const onlineCount = useMemo(
+    () => cameras.filter((c) => cameraStreams[c.id]?.online).length,
+    [cameraStreams],
+  )
   const scenario = demoScenario[activeScenario]
   const totalPeople = scenario.people
 
@@ -161,6 +170,27 @@ export default function App() {
       }
     }
   }, [beep])
+
+  const handleCameraUpload = (camId, file) => {
+    if (!file) return
+
+    const prevUrl = uploadedUrlRef.current[camId]
+    if (prevUrl) URL.revokeObjectURL(prevUrl)
+
+    const objectUrl = URL.createObjectURL(file)
+    uploadedUrlRef.current[camId] = objectUrl
+
+    setCameraStreams((prev) => ({
+      ...prev,
+      [camId]: {
+        url: objectUrl,
+        online: true,
+        source: 'uploaded',
+      },
+    }))
+
+    setToast(`CAM ${String(camId).padStart(2, '0')} 영상 업로드 완료`)
+  }
 
   const startMockAnalysis = () => {
     setAnalysisState('analyzing')
@@ -297,6 +327,15 @@ export default function App() {
     return () => clearTimeout(t)
   }, [toast])
 
+  useEffect(() => {
+    const uploadedUrls = uploadedUrlRef.current
+    return () => {
+      Object.values(uploadedUrls).forEach((url) => {
+        if (url) URL.revokeObjectURL(url)
+      })
+    }
+  }, [])
+
   return (
     <div className="h-screen overflow-hidden bg-[radial-gradient(circle_at_top,#0b1b3a_0%,#020617_45%,#020617_100%)] text-slate-100 p-2.5 md:p-3">
       <div className="h-full flex flex-col min-h-0 rounded-2xl border border-slate-700/80 bg-slate-950/70 backdrop-blur-md shadow-2xl shadow-black/30 p-2 md:p-2.5">
@@ -329,7 +368,6 @@ export default function App() {
               <button onClick={() => setActiveScenario('A')} className={`text-[11px] px-2 py-1.5 ${activeScenario === 'A' ? 'bg-indigo-600' : 'bg-slate-900 hover:bg-slate-800'}`}>시나리오 A</button>
               <button onClick={() => setActiveScenario('B')} className={`text-[11px] px-2 py-1.5 border-l border-slate-700 ${activeScenario === 'B' ? 'bg-indigo-600' : 'bg-slate-900 hover:bg-slate-800'}`}>시나리오 B</button>
             </div>
-            <label className="text-[11px] px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 cursor-pointer">영상 업로드<input type="file" accept="video/*" className="hidden" /></label>
             <button onClick={startMockAnalysis} className="text-[11px] px-2.5 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-600/20">분석 시작</button>
             <button disabled={analysisState !== 'done'} className="text-[11px] px-2.5 py-1.5 rounded-md bg-emerald-600/90 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-400">결과 다운로드</button>
           </div>
@@ -356,19 +394,36 @@ export default function App() {
               <div className="absolute top-1/2 left-0 w-full h-px -translate-y-1/2 bg-white/25" />
             </div>
             {cameras.map((cam) => {
+              const stream = cameraStreams[cam.id] || { url: cam.url, online: cam.online, source: 'demo' }
               const hasViolation = filteredAlerts.some((log) => log.camera === cam.name && ['helmet', 'vest', 'both'].includes(log.type) && log.status !== 'resolved')
               return (
                 <section key={cam.id} className="relative bg-black overflow-hidden">
                   <div className="absolute left-1.5 right-1.5 top-1.5 z-20 flex items-center justify-between px-2 py-1 rounded-md bg-slate-900/70 border border-slate-700/70 backdrop-blur-sm">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{cam.name}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${cam.online ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>{cam.online ? 'ONLINE' : 'OFFLINE'}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${stream.online ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>{stream.online ? 'ONLINE' : 'OFFLINE'}</span>
+                      {stream.source === 'uploaded' && <span className="text-[11px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300">LOCAL VIDEO</span>}
                       {hasViolation && <span className="text-[11px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 animate-pulse">위반 감지</span>}
                     </div>
-                    <button onClick={() => setSelected(cam)} className="text-xs px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700">전체화면</button>
+                    <div className="flex items-center gap-1">
+                      <label className="text-xs px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700 cursor-pointer">
+                        영상 올리기
+                        <input
+                          type="file"
+                          accept="video/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            handleCameraUpload(cam.id, file)
+                            e.target.value = ''
+                          }}
+                        />
+                      </label>
+                      <button onClick={() => setSelected({ ...cam, url: stream.url })} className="text-xs px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700">전체화면</button>
+                    </div>
                   </div>
                   <div className="h-full bg-black">
-                    {cam.online ? <video className="w-full h-full object-cover" src={cam.url} controls autoPlay muted playsInline /> : <div className="w-full h-full flex items-center justify-center text-slate-500">신호 없음</div>}
+                    {stream.online ? <video className="w-full h-full object-cover" src={stream.url} controls autoPlay muted playsInline /> : <div className="w-full h-full flex items-center justify-center text-slate-500">신호 없음</div>}
                   </div>
                 </section>
               )
