@@ -13,6 +13,9 @@ const DEMO_ACCOUNT = {
   name: '안전관리자',
 }
 
+const pageShell = 'min-h-screen bg-[radial-gradient(circle_at_top,#0b1b3a_0%,#020617_45%,#020617_100%)] text-slate-100 p-4 md:p-6'
+const panel = 'mx-auto w-full max-w-[1600px] rounded-2xl border border-slate-700/80 bg-slate-950/70 p-5 shadow-2xl shadow-black/30 backdrop-blur-md'
+
 export default function ViolationActionPage({ onBack }) {
   const [rows, setRows] = useState(initialRows)
   const [eventIdQuery, setEventIdQuery] = useState('')
@@ -65,7 +68,6 @@ export default function ViolationActionPage({ onBack }) {
       setTimeout(() => setNotice(''), 1500)
       return
     }
-
     setLoginError('아이디 또는 비밀번호가 올바르지 않습니다.')
   }
 
@@ -77,44 +79,47 @@ export default function ViolationActionPage({ onBack }) {
 
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-slate-100 p-6 text-slate-900">
-        <div className="mx-auto max-w-[900px] rounded-xl border border-slate-300 bg-white p-6 shadow">
-          <div className="mb-6 flex items-center justify-between">
-            <h2 className="inline-block bg-lime-400 px-3 py-1 text-2xl font-bold">CCTV 안전 위반 조치</h2>
-            <button onClick={onBack} className="rounded border border-slate-400 px-3 py-1 text-sm hover:bg-slate-100">대시보드로 돌아가기</button>
+      <div className={pageShell}>
+        <div className={panel}>
+          <div className="mb-6 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">CCTV 안전 위반 조치</h2>
+              <p className="text-sm text-slate-400">안전관리자 인증 후 조치 페이지에 접근할 수 있습니다.</p>
+            </div>
+            <button onClick={onBack} className="rounded-md border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm hover:bg-slate-800">대시보드로 돌아가기</button>
           </div>
 
-          <div className="mx-auto max-w-[520px] rounded-lg border-2 border-blue-900 bg-slate-50 p-6">
-            <h3 className="mb-4 text-3xl font-bold text-blue-900">안전관리자 로그인</h3>
-            <div className="grid gap-3">
-              <label className="text-2xl font-semibold">아이디</label>
+          <div className="mx-auto w-full max-w-[560px] rounded-xl border border-indigo-500/40 bg-slate-900/70 p-6">
+            <h3 className="mb-5 text-3xl font-bold text-indigo-200">안전관리자 로그인</h3>
+            <div className="space-y-3">
+              <label className="text-lg text-slate-200">아이디</label>
               <input
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
                 placeholder="아이디 입력"
-                className="h-11 border-2 border-blue-800 px-3 text-xl"
+                className="h-11 w-full rounded-md border border-indigo-500/50 bg-slate-950 px-3 text-lg text-slate-100 placeholder:text-slate-400"
               />
 
-              <label className="mt-2 text-2xl font-semibold">비밀번호</label>
+              <label className="pt-1 text-lg text-slate-200">비밀번호</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="비밀번호 입력"
-                className="h-11 border-2 border-blue-800 px-3 text-xl"
+                className="h-11 w-full rounded-md border border-indigo-500/50 bg-slate-950 px-3 text-lg text-slate-100 placeholder:text-slate-400"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleLogin()
                 }}
               />
 
-              {loginError && <p className="text-lg text-red-600">{loginError}</p>}
+              {loginError && <p className="text-sm text-rose-300">{loginError}</p>}
 
-              <button onClick={handleLogin} className="mt-2 rounded border-2 border-blue-900 px-5 py-1.5 text-3xl hover:bg-blue-100">
+              <button onClick={handleLogin} className="mt-2 w-full rounded-md bg-indigo-600 px-4 py-2 text-xl font-semibold hover:bg-indigo-500">
                 로그인
               </button>
             </div>
 
-            <p className="mt-5 text-base text-slate-600">데모 계정: <b>{DEMO_ACCOUNT.id}</b> / <b>{DEMO_ACCOUNT.password}</b></p>
+            <p className="mt-5 text-sm text-slate-300">데모 계정: <b className="text-cyan-300">{DEMO_ACCOUNT.id}</b> / <b className="text-cyan-300">{DEMO_ACCOUNT.password}</b></p>
           </div>
         </div>
       </div>
@@ -122,68 +127,77 @@ export default function ViolationActionPage({ onBack }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 p-6 text-slate-900">
-      <div className="mx-auto max-w-[1600px] rounded-xl border border-slate-300 bg-white p-5 shadow">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="inline-block bg-lime-400 px-3 py-1 text-2xl font-bold">CCTV 안전 위반 조치</h2>
+    <div className={pageShell}>
+      <div className={panel}>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">CCTV 안전 위반 조치</h2>
+            <p className="text-sm text-slate-400">이벤트 조회/처리 상태 수정 페이지</p>
+          </div>
           <div className="flex items-center gap-2">
-            <span className="rounded bg-emerald-100 px-2 py-1 text-sm text-emerald-800">{DEMO_ACCOUNT.name} 로그인됨</span>
-            <button onClick={handleLogout} className="rounded border border-slate-400 px-3 py-1 text-sm hover:bg-slate-100">로그아웃</button>
-            <button onClick={onBack} className="rounded border border-slate-400 px-3 py-1 text-sm hover:bg-slate-100">대시보드로 돌아가기</button>
+            <span className="rounded-md border border-emerald-500/40 bg-emerald-500/15 px-2 py-1 text-xs text-emerald-200">{DEMO_ACCOUNT.name} 로그인됨</span>
+            <button onClick={handleLogout} className="rounded-md border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm hover:bg-slate-800">로그아웃</button>
+            <button onClick={onBack} className="rounded-md border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm hover:bg-slate-800">대시보드로 돌아가기</button>
           </div>
         </div>
 
-        <div className="mb-4 flex flex-wrap items-end gap-3">
-          <div className="flex items-center gap-2">
-            <label className="text-3xl leading-none">이벤트ID:</label>
-            <input value={eventIdQuery} onChange={(e) => setEventIdQuery(e.target.value)} className="h-10 w-36 border-2 border-blue-800 px-2 text-xl" />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label className="text-3xl leading-none">처리:</label>
-            <select value={processedFilter} onChange={(e) => setProcessedFilter(e.target.value)} className="h-10 w-36 border-2 border-blue-800 px-2 text-2xl">
-              <option value="all">All</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
-          </div>
-
-          <div className="ml-auto flex gap-2">
-            <button onClick={handleSearch} className="rounded border-2 border-blue-900 px-5 py-1.5 text-3xl hover:bg-blue-50">조회</button>
-            <button onClick={handleSave} className="rounded border-2 border-blue-900 px-5 py-1.5 text-3xl hover:bg-blue-50">수정</button>
+        <div className="mb-3 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_180px_auto]">
+          <input
+            value={eventIdQuery}
+            onChange={(e) => setEventIdQuery(e.target.value)}
+            placeholder="이벤트ID 검색"
+            className="h-10 rounded-md border border-slate-700 bg-slate-900 px-3 text-sm"
+          />
+          <select
+            value={processedFilter}
+            onChange={(e) => setProcessedFilter(e.target.value)}
+            className="h-10 rounded-md border border-slate-700 bg-slate-900 px-3 text-sm"
+          >
+            <option value="all">처리: 전체</option>
+            <option value="yes">처리: Yes</option>
+            <option value="no">처리: No</option>
+          </select>
+          <div className="flex gap-2">
+            <button onClick={handleSearch} className="rounded-md border border-indigo-500/50 bg-indigo-500/15 px-4 py-2 text-sm hover:bg-indigo-500/25">조회</button>
+            <button onClick={handleSave} className="rounded-md border border-cyan-500/50 bg-cyan-500/15 px-4 py-2 text-sm hover:bg-cyan-500/25">수정 저장</button>
           </div>
         </div>
 
-        <p className="mb-2 text-right text-2xl text-red-600">* 안전관리자 담당자만 조치 가능합니다.</p>
-        {notice && <p className="mb-2 text-right text-lg text-emerald-700">{notice}</p>}
+        <p className="mb-2 text-right text-xs text-amber-300">* 안전관리자 담당자만 조치 가능합니다.</p>
+        {notice && <p className="mb-2 text-right text-sm text-emerald-300">{notice}</p>}
 
-        <div className="overflow-auto rounded border border-slate-300">
-          <table className="w-full min-w-[1200px] border-collapse text-2xl">
-            <thead className="bg-blue-700 text-white">
+        <div className="overflow-auto rounded-xl border border-slate-700/80 bg-slate-900/60">
+          <table className="w-full min-w-[1200px] border-collapse text-sm">
+            <thead className="bg-slate-800 text-slate-200">
               <tr>
-                <th className="border border-slate-200 px-2 py-1">이벤트ID</th>
-                <th className="border border-slate-200 px-2 py-1">CCTV번호</th>
-                <th className="border border-slate-200 px-2 py-1">감지코드</th>
-                <th className="border border-slate-200 px-2 py-1">발생일시</th>
-                <th className="border border-slate-200 px-2 py-1">처리</th>
-                <th className="border border-slate-200 px-2 py-1">처리일자</th>
-                <th className="border border-slate-200 px-2 py-1">생성일자</th>
-                <th className="border border-slate-200 px-2 py-1">수정일자</th>
+                <th className="border border-slate-700 px-2 py-2">이벤트ID</th>
+                <th className="border border-slate-700 px-2 py-2">CCTV번호</th>
+                <th className="border border-slate-700 px-2 py-2">감지코드</th>
+                <th className="border border-slate-700 px-2 py-2">발생일시</th>
+                <th className="border border-slate-700 px-2 py-2">처리</th>
+                <th className="border border-slate-700 px-2 py-2">처리일자</th>
+                <th className="border border-slate-700 px-2 py-2">생성일자</th>
+                <th className="border border-slate-700 px-2 py-2">수정일자</th>
               </tr>
             </thead>
             <tbody>
               {filteredRows.map((row) => (
-                <tr key={row.eventId} className="odd:bg-slate-200 even:bg-slate-300/80">
-                  <td className="border border-slate-100 bg-blue-600 px-2 py-1 text-right font-bold text-white">{row.eventId}</td>
-                  <td className="border border-slate-100 px-2 py-1 text-right">{row.cctvNo}</td>
-                  <td className="border border-slate-100 px-2 py-1">{row.detectCode}</td>
-                  <td className="border border-slate-100 px-2 py-1">{row.occurredAt}</td>
-                  <td className="border border-slate-100 px-2 py-1 text-center">
-                    <input type="checkbox" checked={row.processed} onChange={(e) => toggleProcessed(row.eventId, e.target.checked)} className="h-7 w-7 accent-blue-700" />
+                <tr key={row.eventId} className="odd:bg-slate-950/40 even:bg-slate-900/50">
+                  <td className="border border-slate-800 px-2 py-2 text-right font-semibold text-cyan-300">{row.eventId}</td>
+                  <td className="border border-slate-800 px-2 py-2 text-right">{row.cctvNo}</td>
+                  <td className="border border-slate-800 px-2 py-2">{row.detectCode}</td>
+                  <td className="border border-slate-800 px-2 py-2">{row.occurredAt}</td>
+                  <td className="border border-slate-800 px-2 py-2 text-center">
+                    <input
+                      type="checkbox"
+                      checked={row.processed}
+                      onChange={(e) => toggleProcessed(row.eventId, e.target.checked)}
+                      className="h-5 w-5 accent-indigo-500"
+                    />
                   </td>
-                  <td className="border border-slate-100 px-2 py-1">{row.processedAt || '-'}</td>
-                  <td className="border border-slate-100 px-2 py-1">{row.createdAt}</td>
-                  <td className="border border-slate-100 px-2 py-1">{row.updatedAt}</td>
+                  <td className="border border-slate-800 px-2 py-2">{row.processedAt || '-'}</td>
+                  <td className="border border-slate-800 px-2 py-2">{row.createdAt}</td>
+                  <td className="border border-slate-800 px-2 py-2">{row.updatedAt}</td>
                 </tr>
               ))}
             </tbody>
