@@ -64,6 +64,22 @@ npm run build
 
 ---
 
+## 🧱 현재 코드 구조 (리팩터링 반영)
+
+- `src/data/mockData.js` : 더미 데이터 분리
+- `src/constants/statusStyles.js` : 알람 레벨 스타일 상수
+- `src/components/` : `KpiCard`, `FilterButton`, `StateTile` 분리
+- `src/services/alertsApi.js` : API 호출 골격
+
+## 🔌 API 연결 골격
+
+현재 앱은 시작 시 아래 엔드포인트를 시도합니다.
+
+- `GET /api/alerts/latest`
+
+성공 시 최신 알람 목록으로 교체되고,
+실패 시에는 **Mock 데이터로 fallback** 하며 UI에 안내 문구를 표시합니다.
+
 ## 🔮 추후 확장 (백엔드 연동 시)
 
 - FastAPI + YOLO 기반 분석 API 연결

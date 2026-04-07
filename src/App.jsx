@@ -1,56 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
-
-const cameras = [
-  { id: 1, name: 'CAM 01 - Entrance', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', online: true },
-  { id: 2, name: 'CAM 02 - Lobby', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', online: true },
-  { id: 3, name: 'CAM 03 - Parking', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', online: false },
-  { id: 4, name: 'CAM 04 - Warehouse', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', online: true },
-]
-
-const initialAlertLogs = [
-  { id: 1, level: 'critical', type: 'helmet', time: '18:31:22', camera: 'CAM 03 - Parking', message: '안전모 미착용 인원 감지', confidence: 0.91, status: 'new' },
-  { id: 2, level: 'warning', type: 'vest', time: '18:29:10', camera: 'CAM 02 - Lobby', message: '안전조끼 미착용 인원 감지', confidence: 0.84, status: 'new' },
-  { id: 3, level: 'critical', type: 'both', time: '18:27:04', camera: 'CAM 04 - Warehouse', message: '안전모/안전조끼 미착용 인원 감지', confidence: 0.93, status: 'acked' },
-  { id: 4, level: 'info', type: 'ok', time: '18:21:35', camera: 'CAM 01 - Entrance', message: 'PPE 준수 상태 정상', confidence: 0.98, status: 'acked' },
-]
-
-const eventHistory = [
-  { id: 1, time: '18:20', action: '관리자 로그인', actor: 'admin01' },
-  { id: 2, time: '18:12', action: 'CAM 04 확대 보기', actor: 'admin01' },
-  { id: 3, time: '18:09', action: '알람 확인 처리', actor: 'manager02' },
-  { id: 4, time: '18:02', action: '분석 작업 시작', actor: 'system' },
-]
-
-const systemEvents = [
-  '[SYS] Gateway 연결 상태 정상',
-  '[MODEL] PPE detector warm-up 완료',
-  '[QUEUE] 분석 작업 2건 대기',
-  '[STORAGE] 결과 저장 경로 정상',
-]
-
-const bottomFeed = [
-  { id: 1, level: 'critical', text: '[18:31:22] CAM 03 - Parking | 안전모 미착용 인원 감지' },
-  { id: 2, level: 'warning', text: '[18:29:10] CAM 02 - Lobby | 안전조끼 미착용 인원 감지' },
-  { id: 3, level: 'critical', text: '[18:27:04] CAM 04 - Warehouse | 안전모/안전조끼 미착용 인원 감지' },
-  { id: 4, level: 'info', text: '[18:21:35] CAM 01 - Entrance | PPE 준수 상태 정상' },
-]
-
-const demoScenario = {
-  A: { name: '시나리오 A · 주간 작업 구역', people: 17, violations: 5, completeAt: '20:44:10' },
-  B: { name: '시나리오 B · 야간 창고 점검', people: 11, violations: 3, completeAt: '20:44:35' },
-}
-
-const levelStyles = {
-  critical: 'bg-rose-500/15 text-rose-300 border border-rose-500/30',
-  warning: 'bg-amber-500/15 text-amber-300 border border-amber-500/30',
-  info: 'bg-sky-500/15 text-sky-300 border border-sky-500/30',
-}
-
-const statusChip = [
-  { name: 'Gateway', value: 'Connected', tone: 'ok' },
-  { name: 'Model', value: 'Running', tone: 'ok' },
-  { name: 'DB', value: 'Healthy', tone: 'ok' },
-]
+import KpiCard from './components/KpiCard'
+import FilterButton from './components/FilterButton'
+import StateTile from './components/StateTile'
+import {
+  bottomFeed,
+  cameras,
+  demoScenario,
+  eventHistory,
+  initialAlertLogs,
+  statusChip,
+  systemEvents,
+} from './data/mockData'
+import { levelStyles } from './constants/statusStyles'
+import { fetchLatestAlerts } from './services/alertsApi'
 
 export default function App() {
   const [selected, setSelected] = useState(null)
@@ -62,6 +24,8 @@ export default function App() {
   const [showDoneModal, setShowDoneModal] = useState(false)
   const [alerts, setAlerts] = useState(initialAlertLogs)
   const [selectedAlertId, setSelectedAlertId] = useState(initialAlertLogs[0].id)
+  const [alertsLoading, setAlertsLoading] = useState(false)
+  const [alertsError, setAlertsError] = useState('')
 
   const nowLabel = useMemo(
     () =>
@@ -108,11 +72,31 @@ export default function App() {
     }, activeScenario === 'A' ? 180 : 220)
   }
 
+  const loadAlerts = async () => {
+    setAlertsLoading(true)
+    setAlertsError('')
+    try {
+      const latest = await fetchLatestAlerts()
+      if (latest.length > 0) {
+        setAlerts(latest)
+        setSelectedAlertId(latest[0].id)
+      }
+    } catch {
+      setAlertsError('API 연결 실패 · Mock 데이터로 동작 중')
+    } finally {
+      setAlertsLoading(false)
+    }
+  }
+
   const statusText = analysisState === 'idle' ? '대기' : analysisState === 'analyzing' ? '분석 중' : '분석 완료'
 
   useEffect(() => {
     if (analysisState === 'done') setShowDoneModal(true)
   }, [analysisState])
+
+  useEffect(() => {
+    loadAlerts()
+  }, [])
 
   return (
     <div className="h-screen overflow-hidden bg-[radial-gradient(circle_at_top,#0b1b3a_0%,#020617_45%,#020617_100%)] text-slate-100 p-2.5 md:p-3">
@@ -222,19 +206,24 @@ export default function App() {
             </section>
 
             <section className="rounded-xl bg-slate-900/55 border border-slate-700/80 p-2 min-h-0 flex flex-col">
-              <div className="flex gap-2 mb-3">
-                <button onClick={() => setActiveTab('alerts')} className={`text-xs px-2 py-1 rounded-md ${activeTab === 'alerts' ? 'bg-indigo-600' : 'bg-slate-800 hover:bg-slate-700'}`}>알람 로그</button>
-                <button onClick={() => setActiveTab('history')} className={`text-xs px-2 py-1 rounded-md ${activeTab === 'history' ? 'bg-indigo-600' : 'bg-slate-800 hover:bg-slate-700'}`}>운영 히스토리</button>
+              <div className="flex gap-2 mb-2 items-center justify-between">
+                <div className="flex gap-2">
+                  <button onClick={() => setActiveTab('alerts')} className={`text-xs px-2 py-1 rounded-md ${activeTab === 'alerts' ? 'bg-indigo-600' : 'bg-slate-800 hover:bg-slate-700'}`}>알람 로그</button>
+                  <button onClick={() => setActiveTab('history')} className={`text-xs px-2 py-1 rounded-md ${activeTab === 'history' ? 'bg-indigo-600' : 'bg-slate-800 hover:bg-slate-700'}`}>운영 히스토리</button>
+                </div>
+                <button onClick={loadAlerts} className="text-[10px] px-2 py-1 rounded border border-slate-700 bg-slate-900 hover:bg-slate-800">새로고침</button>
               </div>
 
               {activeTab === 'alerts' ? (
                 <>
-                  <div className="flex gap-2 mb-2 flex-wrap">
+                  <div className="flex gap-2 mb-2 flex-wrap items-center">
                     <FilterButton label="전체" value="all" current={alertFilter} onChange={setAlertFilter} />
                     <FilterButton label="안전모" value="helmet" current={alertFilter} onChange={setAlertFilter} />
                     <FilterButton label="조끼" value="vest" current={alertFilter} onChange={setAlertFilter} />
                     <FilterButton label="둘 다" value="both" current={alertFilter} onChange={setAlertFilter} />
+                    {alertsLoading && <span className="text-[10px] text-slate-400">불러오는 중...</span>}
                   </div>
+                  {alertsError && <p className="text-[10px] text-amber-300 mb-2">{alertsError}</p>}
                   <ul className="space-y-2 overflow-auto pr-1">
                     {filteredAlerts.map((log) => (
                       <li key={log.id} onClick={() => setSelectedAlertId(log.id)} className={`rounded-lg border p-2 cursor-pointer ${selectedAlertId === log.id ? 'border-indigo-500 bg-slate-800' : 'border-slate-800 bg-slate-900'}`}>
@@ -307,38 +296,6 @@ export default function App() {
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-function KpiCard({ title, value, sub, tone = 'default' }) {
-  const toneStyle = tone === 'warn' ? 'border-amber-400/40 bg-gradient-to-br from-amber-500/12 to-slate-900/40' : tone === 'good' ? 'border-emerald-400/40 bg-gradient-to-br from-emerald-500/12 to-slate-900/40' : 'border-slate-700/80 bg-gradient-to-br from-slate-800/80 to-slate-900/60'
-  return (
-    <article className={`rounded-xl border px-2.5 py-2 shadow-sm ${toneStyle}`}>
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-xs leading-none">
-        <p className="text-slate-300 truncate">{title}</p>
-        <p className="text-sm font-bold shrink-0">{value}</p>
-        <p className="text-slate-500 truncate text-right">{sub}</p>
-      </div>
-    </article>
-  )
-}
-
-function FilterButton({ label, value, current, onChange }) {
-  const active = current === value
-  return (
-    <button onClick={() => onChange(value)} className={`text-[11px] px-2 py-1 rounded-md border ${active ? 'border-indigo-500 bg-indigo-500/20 text-indigo-200' : 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800'}`}>
-      {label}
-    </button>
-  )
-}
-
-function StateTile({ label, value, tone = 'default' }) {
-  const style = tone === 'good' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200' : tone === 'bad' ? 'bg-rose-500/10 border-rose-500/30 text-rose-200' : 'bg-slate-900 border-slate-800 text-slate-100'
-  return (
-    <div className={`rounded-lg border p-2 ${style}`}>
-      <div className="text-slate-400">{label}</div>
-      <div className="text-base font-bold">{value}</div>
     </div>
   )
 }
