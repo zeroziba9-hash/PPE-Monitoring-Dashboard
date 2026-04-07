@@ -63,26 +63,69 @@ npm run build
 4. 진행률 증가 확인
 5. 분석 완료 모달 및 KPI/로그 확인
 6. 알람 상세에서 `확인/담당자 지정/사건 등록/해결 완료` 시연
-7. `조치 작성 페이지`로 이동 후 조회/수정 시연
+7. `조치 작성 페이지`로 이동 후 로그인/조회/수정 시연
 
 ---
 
-### UI Quick Guide (전체 화면)
+## 📸 화면 가이드 (작은 스크린샷 중심)
+
+### 0) 전체 화면 (문맥 확인용)
 
 ![Dashboard Overview](docs/screenshots/01-dashboard-overview.png)
 
-- ① CAM 모니터링 영역
-- ② 상단 제어 버튼(시나리오/분석 시작/결과)
-- ③ 알람 로그 및 상세 조치
-- ④ 하단 이벤트 피드
+---
+
+### 1) CAM별 `영상 올리기`
+
+<img src="docs/screenshots/02-cam-upload-button.png" width="420" alt="CAM Upload Button" />
+
+- **기능:** 특정 CAM 타일에 로컬 영상 연결
+- **사용법:** `영상 올리기` 클릭 → 파일 선택
+- **결과:** 해당 CAM에만 반영, `LOCAL VIDEO` 배지 표시
 
 ---
 
-## 🔘 버튼별 기능 & 사용법
+### 2) `분석 시작` / `결과`
 
-아래는 실제 현재 화면 기준 버튼 인덱스입니다.
+<img src="docs/screenshots/03-analysis-start.png" width="420" alt="Start Analysis Button" />
 
-### 버튼 인덱스 (Quick Reference)
+- **기능:** 분석 시뮬레이션 실행 및 완료 후 결과 처리
+- **사용법:** (선택) 시나리오 A/B → `분석 시작`
+- **결과:** 진행률 바 동작, 완료 후 결과 버튼 활성화
+
+---
+
+### 3) 알람 조치 버튼
+
+<img src="docs/screenshots/04-alert-action-buttons.png" width="420" alt="Alert Action Buttons" />
+
+- **버튼:** `확인(ACK)` / `담당자 지정` / `사건 등록` / `해결 완료`
+- **기능:** 알람 상태 전이 + 조치 이력 기록
+- **결과:** 상태값/운영 히스토리 동기화
+
+---
+
+### 4) 조치 작성 페이지 로그인
+
+<img src="docs/screenshots/05-action-page-login.png" width="420" alt="Action Page Login" />
+
+- **기능:** 조치 페이지 접근 전 안전관리자 인증
+- **데모 계정:** `safety-admin / admin1234`
+- **결과:** 인증 성공 시 조치 테이블 화면 진입
+
+---
+
+### 5) 조치 작성 테이블 (`조회` / `수정 저장`)
+
+<img src="docs/screenshots/06-action-page-table.png" width="420" alt="Action Page Table" />
+
+- **기능:** 이벤트 조회 및 처리 상태 수정
+- **사용법:** 이벤트ID/처리필터 입력 → `조회` → 체크 변경 → `수정 저장`
+- **결과:** 처리/수정일자 갱신 (Demo)
+
+---
+
+## 🔘 버튼 인덱스 (Quick Reference)
 
 - `영상 올리기` : CAM별 로컬 영상 업로드
 - `분석 시작` : 분석 시뮬레이션 실행
@@ -95,55 +138,6 @@ npm run build
 - `로그인` : 안전관리자 인증
 - `조회` : 이벤트 조건 검색
 - `수정 저장` : 처리 상태 변경사항 저장
-
-### 1) CAM별 `영상 올리기`
-
-![CAM Upload](docs/screenshots/02-cam-upload-button.png)
-
-- **기능:** 특정 카메라 타일에 로컬 영상 파일 연결
-- **사용법:** CAM 카드 우측 상단 `영상 올리기` 클릭 → 파일 선택
-- **결과:** 해당 CAM에만 영상 적용, `LOCAL VIDEO` 배지 표시
-
-### 2) `분석 시작` / `결과`
-
-![Start Analysis](docs/screenshots/03-analysis-start.png)
-
-- **기능:** 분석 시뮬레이션 시작
-- **사용법:** (선택) 시나리오 A/B 설정 → `분석 시작`
-- **결과:** 진행률 바 활성화, 완료 시 모달 표시 / `결과` 버튼 활성화
-
-### 3) 알람 조치 버튼 (`확인/담당자 지정/사건 등록/해결 완료`)
-
-![Alert Actions](docs/screenshots/04-alert-action-buttons.png)
-
-- **기능:** 알람 상태 전이 및 조치 기록
-- **사용법:** 알람 선택 → 조치 버튼 클릭 → 모달에서 저장
-- **결과:** 상태값 갱신 + 운영 히스토리 반영
-
-### 4) `조치 작성 페이지` 진입
-
-![Action Page Login](docs/screenshots/05-action-page-login.png)
-
-- **기능:** 조치 전용 화면으로 이동
-- **사용법:** 상단 `조치 작성 페이지` 버튼 클릭
-- **결과:** 로그인 화면으로 이동
-
-### 5) 조치 페이지 `로그인`
-
-![Action Login](docs/screenshots/05-action-page-login.png)
-
-- **기능:** 안전관리자 권한 확인
-- **사용법:** ID/PW 입력 후 로그인
-- **데모 계정:** `safety-admin / admin1234`
-- **결과:** 조치 테이블 화면 접근 허용
-
-### 6) 조치 페이지 `조회/수정 저장`
-
-![Action Table](docs/screenshots/06-action-page-table.png)
-
-- **기능:** 이벤트 조회 및 처리 상태 수정
-- **사용법:** 이벤트ID/처리필터 설정 → `조회` → 체크박스 수정 → `수정 저장`
-- **결과:** 처리/수정일자 갱신 (Demo)
 
 ---
 
