@@ -362,7 +362,7 @@ export default function App() {
           </div>
         </section>
 
-        <header className="mb-1 flex items-end justify-between gap-2 relative">
+        <header className="mb-1.5 flex items-end justify-between gap-2.5 relative">
           <div className="pointer-events-none absolute -top-8 right-0 h-24 w-40 bg-indigo-500/20 blur-3xl" />
           <div>
             <div className="flex items-center gap-2">
