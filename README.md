@@ -67,21 +67,6 @@ npm run build
 
 ---
 
-## 📸 스크린샷 가이드 (버튼별 기능 문서화)
-
-발표/포트폴리오용으로 버튼 기능을 빠르게 이해시키기 위해, 아래 형식으로 스크린샷을 추가합니다.
-
-### 스크린샷 파일 규칙
-
-- 경로: `docs/screenshots/`
-- 파일명 예시:
-  - `01-dashboard-overview.png`
-  - `02-cam-upload-button.png`
-  - `03-analysis-start.png`
-  - `04-alert-action-buttons.png`
-  - `05-action-page-login.png`
-  - `06-action-page-table.png`
-
 ### UI Quick Guide (전체 화면)
 
 ![Dashboard Overview](docs/screenshots/01-dashboard-overview.png)
