@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "http://localhost:5173") // 리액트 프로젝트의 주소와 포트를 허용
 @RequiredArgsConstructor
 public class UserController {
 

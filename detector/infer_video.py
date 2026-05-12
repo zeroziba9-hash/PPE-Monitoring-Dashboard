@@ -13,7 +13,7 @@ from ultralytics import YOLO
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Run PPE inference on a saved video")
     p.add_argument("--video", required=True, help="Input video path")
-    p.add_argument("--model", default=r"C:\Users\ASUS\Desktop\PPE-monitoring\AI\new_best_model\weights\best.pt", help="YOLO model path")
+    p.add_argument("--model", default=str(Path(__file__).resolve().parent.parent / "AI" / "new_best_model" / "weights" / "best.pt"), help="YOLO model path")
     p.add_argument("--out-video", default="", help="Annotated output video path (optional)")
     p.add_argument("--out-jsonl", default="inference_results.jsonl", help="Output JSONL path")
     p.add_argument("--conf", type=float, default=0.25, help="Confidence threshold")

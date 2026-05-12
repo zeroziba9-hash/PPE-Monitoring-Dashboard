@@ -4,10 +4,10 @@ export default function FilterButton({ label, value, current, onChange }) {
   return (
     <button
       onClick={() => onChange(value)}
-      className={`text-xs px-3 py-1.5 rounded-md border transition-colors ${
+      className={`text-[11px] px-2.5 py-1 rounded border transition-colors font-medium ${
         active
-          ? 'border-indigo-500 bg-indigo-500/25 text-indigo-200'
-          : 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800'
+          ? 'border-indigo-500/60 bg-indigo-500/20 text-indigo-300'
+          : 'border-slate-700/60 bg-slate-900/60 text-slate-500 hover:text-slate-300 hover:border-slate-600'
       }`}
     >
       {label}

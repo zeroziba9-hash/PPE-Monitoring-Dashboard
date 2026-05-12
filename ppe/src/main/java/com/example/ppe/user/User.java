@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 public class User {
 
     @Id
-    @Column(name = "employee_id", length = 5, nullable = false)
+    @Column(name = "employee_id", length = 50, nullable = false)
     private String employeeId;
 
     @Column(name = "employee_name", length = 20, nullable = false)

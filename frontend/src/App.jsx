@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client/dist/sockjs.js'
 import FilterButton from './components/FilterButton'
-import StateTile from './components/StateTile'
+import KpiCard from './components/KpiCard'
+import StatsChart from './components/StatsChart'
 import ViolationActionPage from './components/ViolationActionPage'
 import {
   cameras,
@@ -25,7 +26,7 @@ const statusBadgeStyle = {
   new: 'bg-rose-500/20 text-rose-300 border border-rose-500/30',
   acked: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
   in_progress: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
-  resolved: 'bg-sky-500/20 text-sky-300 border border-sky-500/30',
+  resolved: 'bg-slate-500/20 text-slate-400 border border-slate-600/40',
   unknown: 'bg-slate-500/20 text-slate-300 border border-slate-500/30',
 }
 
@@ -120,7 +121,9 @@ const normalizeAlert = (a) => {
 
   if (isBackendEvent) {
     const type = detectedTypeMap[a.detectedCode] || 'ok'
-    const status = a.completedFlag ? 'resolved' : 'new'
+    const status = (a.status && validStatus.has(a.status))
+      ? a.status
+      : (a.completedFlag ? 'resolved' : 'new')
     const date = a.detectedAt ? new Date(a.detectedAt) : new Date()
     const rawCamera = a.cctvNo
     const normalizedCamera =
@@ -157,6 +160,19 @@ const normalizeAlert = (a) => {
   }
 }
 
+// ── 아이콘 컴포넌트 ──────────────────────────────────────────
+const ShieldIcon = ({ className = 'w-5 h-5' }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.955 11.955 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+  </svg>
+)
+
+const severityAccent = {
+  critical: 'bg-rose-500',
+  warning: 'bg-amber-500',
+  info: 'bg-slate-600',
+}
+
 export default function App() {
   const [selected, setSelected] = useState(null)
   const [pageMode, setPageMode] = useState('dashboard')
@@ -185,15 +201,15 @@ export default function App() {
   const previousNewCountRef = useRef(0)
   const uploadedUrlRef = useRef({})
   const liveBoxTimersRef = useRef({})
-  const uploadBlockRef = useRef({}) // {[camNo]: unblockTime} - 업로드 후 bbox 블랙아웃
+  const uploadBlockRef = useRef({})
   const [liveBBoxes, setLiveBBoxes] = useState({})
   const [detectorLiveByCamNo, setDetectorLiveByCamNo] = useState({})
-  const [videoDims, setVideoDims] = useState({}) // {[camId]: {nw, nh}}
-  const [playingCams, setPlayingCams] = useState({}) // {[camId]: boolean}
-  const [bboxBlocked, setBboxBlocked] = useState({}) // {[camId]: boolean} - 업로드 중 bbox 완전 차단
-  const videoContainerRefs = useRef({}) // {[camId]: HTMLElement}
+  const [videoDims, setVideoDims] = useState({})
+  const [playingCams, setPlayingCams] = useState({})
+  const [bboxBlocked, setBboxBlocked] = useState({})
+  const [connectionStatus, setConnectionStatus] = useState('checking') // 'online'|'offline'|'checking'
+  const videoContainerRefs = useRef({})
 
-  // object-fit: contain 기준으로 실제 영상 렌더링 영역 계산
   const getVideoOverlayStyle = useCallback((camId) => {
     const dims = videoDims[camId]
     const container = videoContainerRefs.current[camId]
@@ -237,6 +253,7 @@ export default function App() {
   }, [alertFilter, alerts, hideResolved, timeRange, searchKeyword])
 
   const selectedAlert = alerts.find((a) => a.id === selectedAlertId) ?? alerts[0]
+  const newAlertsCount = alerts.filter((a) => a.status === 'new').length
   const violationCount = alerts.filter((a) => ['helmet', 'vest', 'both'].includes(a.type)).length
   const resolvedCount = alerts.filter((a) => a.status === 'resolved').length
   const pendingCount = alerts.filter((a) => a.status !== 'resolved').length
@@ -263,7 +280,6 @@ export default function App() {
     const cameraName = cameras.find((c) => c.id === camId)?.name || `CAM ${String(camId).padStart(2, '0')}`
     const camNo = cameraNoFromName(cameraName)
 
-    // bbox 완전 차단 시작
     setBboxBlocked((prev) => ({ ...prev, [camId]: true }))
     setPlayingCams((prev) => ({ ...prev, [camId]: false }))
     if (camNo) {
@@ -286,7 +302,6 @@ export default function App() {
     } catch {
       setAlertsError('디텍터 연결 실패 · http://127.0.0.1:8000 실행 확인 필요')
     } finally {
-      // 응답 후 3초 더 기다렸다가 차단 해제 (새 detector가 안정화될 때까지)
       setTimeout(() => {
         setBboxBlocked((prev) => ({ ...prev, [camId]: false }))
       }, 3000)
@@ -311,11 +326,13 @@ export default function App() {
         previousNewCountRef.current = nowNewCount
         notifyNewAlert(diff)
         setLastSuccessAt(new Date().toLocaleTimeString('ko-KR', { hour12: false }))
+        setConnectionStatus('online')
         setAlertsLoading(false)
         return
       } catch {
         if (retries === 0) {
           setAlertsError('API 연결 실패 · Mock 데이터로 동작 중')
+          setConnectionStatus('offline')
           setAlertsLoading(false)
           return
         }
@@ -337,10 +354,9 @@ export default function App() {
     const nextStatus = actionToStatus[actionType] ?? 'acked'
     const actionName = actionType === 'ack' ? '알람 확인 처리' : '해결 처리'
     setActionSaving(true)
+
     try {
-      await patchAlertStatus(selectedAlert.id, {
-        status: nextStatus === 'resolved' ? 'RESOLVED' : 'PENDING',
-      })
+      await patchAlertStatus(selectedAlert.id, { status: nextStatus })
     } catch {
       setAlertsError('상태 변경 API 실패 · 로컬 상태로 반영됨')
     } finally {
@@ -357,14 +373,14 @@ export default function App() {
     }
   }
 
-  // 앱 시작 시 4개 카메라 자동 감지 시작
   useEffect(() => {
+    const videoDir = (import.meta.env.VITE_VIDEO_DIR || '').replace(/[/\\]$/, '')
     const camVideoPaths = [
-      { id: 1, name: 'CAM 01 - Entrance', path: String.raw`C:\Users\ASUS\Desktop\PPE-Monitoring-Dashboard\PPE-Monitoring-Dashboard\public\cam1.mp4` },
-      { id: 2, name: 'CAM 02 - Lobby',    path: String.raw`C:\Users\ASUS\Desktop\PPE-Monitoring-Dashboard\PPE-Monitoring-Dashboard\public\cam2.mp4` },
-      { id: 3, name: 'CAM 03 - Parking',  path: String.raw`C:\Users\ASUS\Desktop\PPE-Monitoring-Dashboard\PPE-Monitoring-Dashboard\public\cam3.mp4` },
-      { id: 4, name: 'CAM 04 - Warehouse',path: String.raw`C:\Users\ASUS\Desktop\PPE-Monitoring-Dashboard\PPE-Monitoring-Dashboard\public\cam4.mp4` },
-    ]
+      { id: 1, name: 'CAM 01 - Entrance',  path: videoDir ? `${videoDir}\\cam1_12fps_0.33.mp4` : '' },
+      { id: 2, name: 'CAM 02 - Lobby',     path: videoDir ? `${videoDir}\\cam2_12fps_0.33.mp4` : '' },
+      { id: 3, name: 'CAM 03 - Parking',   path: videoDir ? `${videoDir}\\cam3_12fps_0.33.mp4` : '' },
+      { id: 4, name: 'CAM 04 - Warehouse', path: videoDir ? `${videoDir}\\cam4_12fps_0.33.mp4` : '' },
+    ].filter(c => c.path)
     camVideoPaths.forEach(({ name, path }) => {
       fetch('http://127.0.0.1:8000/start', {
         method: 'POST',
@@ -433,7 +449,6 @@ export default function App() {
           Object.entries(byCamera).forEach(([cameraName, value]) => {
             const camNo = cameraNoFromName(cameraName)
             if (!camNo) return
-            // 업로드 직후 블랙아웃 기간이면 무시
             const blockUntil = uploadBlockRef.current[camNo]
             if (blockUntil && Date.now() < blockUntil) return
             const incoming = Array.isArray(value?.detections) ? value.detections : []
@@ -458,6 +473,12 @@ export default function App() {
     return () => clearTimeout(t)
   }, [toast])
 
+  // 브라우저 탭 타이틀에 미확인 건수 표시
+  useEffect(() => {
+    const newCount = alerts.filter((a) => a.status === 'new').length
+    document.title = newCount > 0 ? `(${newCount}) PPE Monitoring` : 'PPE Monitoring Dashboard'
+  }, [alerts])
+
   useEffect(() => {
     const uploadedUrls = uploadedUrlRef.current
     return () => { Object.values(uploadedUrls).forEach((url) => { if (url) URL.revokeObjectURL(url) }) }
@@ -468,77 +489,109 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#0b1b3a_0%,#020617_50%,#020617_100%)] text-slate-100 p-3">
-      <div className="flex flex-col rounded-2xl border border-slate-700/60 bg-slate-950/70 backdrop-blur-md shadow-2xl shadow-black/40 p-3 gap-3">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,#0d1f3c_0%,#020617_55%)] text-slate-100 p-3">
+      <div className="flex flex-col rounded-2xl border border-slate-700/50 bg-slate-950/80 backdrop-blur-md shadow-2xl shadow-black/60 p-3 gap-3">
 
         {/* ── 헤더 ── */}
         <header className="flex items-center justify-between gap-3 px-1">
-          <div className="flex items-center gap-3">
+          {/* 로고 + 제목 */}
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400">
+              <ShieldIcon className="w-4.5 h-4.5" />
+            </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold tracking-tight">PPE Monitoring Dashboard</h1>
-                <span className="rounded border border-indigo-400/50 bg-indigo-500/20 px-2 py-0.5 text-[11px] text-indigo-200">DEMO</span>
+                <h1 className="text-sm font-bold tracking-tight text-slate-100">PPE Monitoring</h1>
+                <span className="inline-flex items-center gap-1 rounded border border-rose-500/40 bg-rose-500/10 px-1.5 py-0.5 text-[10px] text-rose-300 font-semibold">
+                  <span className="w-1 h-1 rounded-full bg-rose-400 animate-pulse" />
+                  LIVE
+                </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">CCTV 기반 안전 보호구 실시간 모니터링</p>
+              <p className="text-[10px] text-slate-600 mt-0.5">CCTV 기반 안전 보호구 실시간 모니터링</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-300">
-            {lastSuccessAt && (
-              <span className="rounded border border-emerald-700/40 bg-emerald-900/20 px-2 py-1 text-emerald-300">
-                API 동기화 {lastSuccessAt}
+
+          {/* 상태 칩 + 버튼 */}
+          <div className="flex items-center gap-2">
+            {/* 오프라인 배너 */}
+            {connectionStatus === 'offline' && (
+              <span className="hidden sm:flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[10px] text-amber-300 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                백엔드 오프라인 · Mock 동작 중
               </span>
             )}
-            {statusChip.map((chip) => (
-              <span key={chip.name} className="rounded border border-slate-700 bg-slate-900 px-2 py-1">
-                {chip.name}: <b className="text-emerald-300">{chip.value}</b>
-              </span>
-            ))}
+            {connectionStatus === 'online' && lastSuccessAt && (
+              <span className="text-[10px] text-slate-600 tabular-nums hidden sm:inline">↻ {lastSuccessAt}</span>
+            )}
+            <div className="hidden sm:flex items-center gap-1">
+              {statusChip.map((chip) => (
+                <span key={chip.name} className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] ${
+                  connectionStatus === 'offline'
+                    ? 'border-slate-800 bg-slate-900/40 text-slate-700'
+                    : 'border-slate-700/60 bg-slate-900/60 text-slate-500'
+                }`}>
+                  <span className={`w-1 h-1 rounded-full ${connectionStatus === 'offline' ? 'bg-slate-700' : 'bg-emerald-400'}`} />
+                  {chip.name}
+                </span>
+              ))}
+            </div>
             <button
               onClick={() => setPageMode('action')}
-              className="rounded border border-cyan-500/50 bg-cyan-500/15 px-3 py-1 text-cyan-200 hover:bg-cyan-500/25 transition-colors"
+              className="rounded-lg border border-indigo-500/40 bg-indigo-500/10 px-3 py-1.5 text-[11px] text-indigo-300 hover:bg-indigo-500/20 transition-colors font-medium"
             >
-              조치 페이지
+              조치 페이지 →
             </button>
           </div>
         </header>
 
         {/* ── 메인 영역 ── */}
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-3 xl:h-[780px]">
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_370px] gap-3 xl:h-[790px]">
 
           {/* CCTV 그리드 */}
-          <main className="relative grid grid-cols-1 md:grid-cols-2 md:grid-rows-2 gap-0 min-h-[420px] xl:min-h-[700px] overflow-hidden rounded-xl bg-black">
-            <div className="pointer-events-none absolute inset-0 hidden md:block z-10">
-              <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/20" />
-              <div className="absolute top-1/2 left-0 w-full h-px -translate-y-1/2 bg-white/20" />
-            </div>
-
+          <main className="grid grid-cols-1 md:grid-cols-2 md:grid-rows-2 gap-0.5 min-h-[420px] xl:min-h-[700px] overflow-hidden rounded-xl bg-slate-900/60 border border-slate-800/60">
             {cameras.map((cam) => {
               const stream = cameraStreams[cam.id] || { url: cam.url, online: cam.online, source: 'demo' }
               const camNo = cameraNoFromName(cam.name)
               const liveViolation = camNo ? liveBBoxes[camNo] : null
               const detectorLive = camNo ? detectorLiveByCamNo[camNo] : null
               const overlayDetections = detectorLive?.detections || []
-              const hasViolation = overlayDetections.length > 0 || Boolean(liveViolation)
+              const hasViolation = overlayDetections.some((det) => {
+                const cls = String(det.className || '').toLowerCase()
+                return cls.includes('no-helmet') || cls.includes('no_helmet') ||
+                       cls.includes('no-vest')   || cls.includes('no_vest')
+              }) || Boolean(liveViolation)
 
               return (
-                <section key={cam.id} className="relative bg-black overflow-hidden">
-                  {/* 카메라 상단 바 */}
-                  <div className="absolute left-2 right-2 top-2 z-20 flex items-center justify-between px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-700/60 backdrop-blur-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">{cam.name}</span>
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full ${stream.online ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
-                        {stream.online ? 'ONLINE' : 'OFFLINE'}
-                      </span>
+                <section
+                  key={cam.id}
+                  className={`relative bg-black overflow-hidden transition-all duration-300 ${
+                    hasViolation ? 'ring-2 ring-rose-500/70 ring-inset' : ''
+                  }`}
+                >
+                  {/* 상단 그라데이션 오버레이 */}
+                  <div className="pointer-events-none absolute left-0 right-0 top-0 z-20 h-14 bg-gradient-to-b from-black/75 via-black/30 to-transparent" />
+
+                  {/* 카메라 레이블 바 */}
+                  <div className="absolute left-0 right-0 top-0 z-30 flex items-center justify-between px-2.5 pt-2">
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                        stream.online
+                          ? hasViolation
+                            ? 'bg-rose-400 shadow-[0_0_6px_#f87171]'
+                            : 'bg-emerald-400 shadow-[0_0_4px_#34d399]'
+                          : 'bg-slate-500'
+                      }`} />
+                      <span className="text-[11px] font-semibold text-white drop-shadow-sm">{cam.name}</span>
                       {stream.source === 'uploaded' && (
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300">LOCAL</span>
+                        <span className="text-[9px] px-1 py-0.5 rounded bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 font-medium">LOCAL</span>
                       )}
                       {hasViolation && (
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 animate-pulse">위반 감지</span>
+                        <span className="text-[9px] px-1 py-0.5 rounded bg-rose-500/25 text-rose-300 border border-rose-500/40 font-semibold animate-pulse">위반</span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <label className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 cursor-pointer transition-colors">
-                        영상 올리기
+                      <label className="text-[10px] px-1.5 py-0.5 rounded bg-black/50 hover:bg-black/70 cursor-pointer transition-colors text-slate-300 border border-white/10 backdrop-blur-sm">
+                        업로드
                         <input
                           type="file"
                           accept="video/*"
@@ -552,9 +605,9 @@ export default function App() {
                       </label>
                       <button
                         onClick={() => setSelected({ ...cam, url: stream.url })}
-                        className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 transition-colors"
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-black/50 hover:bg-black/70 transition-colors text-slate-300 border border-white/10 backdrop-blur-sm"
                       >
-                        전체화면
+                        ⛶
                       </button>
                     </div>
                   </div>
@@ -566,6 +619,20 @@ export default function App() {
                   >
                     {stream.online ? (
                       <>
+                        {/* 로딩 스켈레톤 - 메타데이터 로드 전 */}
+                        {!videoDims[cam.id] && (
+                          <div className="absolute inset-0 z-[5] bg-slate-950 flex flex-col items-center justify-center gap-3 pointer-events-none">
+                            <div className="relative w-10 h-10">
+                              <div className="absolute inset-0 rounded-full bg-slate-800 animate-pulse" />
+                              <div className="absolute inset-2 rounded-full bg-slate-700 animate-pulse" style={{ animationDelay: '150ms' }} />
+                            </div>
+                            <div className="space-y-1.5 flex flex-col items-center">
+                              <div className="h-1.5 w-20 bg-slate-800 rounded-full animate-pulse" />
+                              <div className="h-1.5 w-14 bg-slate-800 rounded-full animate-pulse" style={{ animationDelay: '200ms' }} />
+                            </div>
+                            <p className="text-[10px] text-slate-700">영상 로딩 중...</p>
+                          </div>
+                        )}
                         <video
                           className="w-full h-full object-contain bg-black"
                           src={stream.url}
@@ -597,7 +664,7 @@ export default function App() {
                               const clsName = String(det.className || '').toLowerCase()
                               const isViolation = clsName.includes('no-helmet') || clsName.includes('no_helmet') || clsName.includes('no-vest') || clsName.includes('no_vest')
                               const borderCls = isViolation ? 'border-rose-500' : 'border-cyan-400'
-                              const labelCls = isViolation ? 'bg-rose-600/90' : 'bg-cyan-600/90'
+                              const labelCls = isViolation ? 'bg-rose-600/95' : 'bg-cyan-600/95'
                               const style = {
                                 left: `${Math.max(0, x1 * 100)}%`,
                                 top: `${Math.max(0, y1 * 100)}%`,
@@ -607,10 +674,10 @@ export default function App() {
                               return (
                                 <div
                                   key={`${det.className || 'det'}-${idx}`}
-                                  className={`absolute border-2 ${borderCls} shadow-[0_0_0_1px_rgba(255,255,255,0.2)]`}
+                                  className={`absolute border-2 ${borderCls} shadow-[0_0_0_1px_rgba(0,0,0,0.4)]`}
                                   style={style}
                                 >
-                                  <span className={`absolute -top-6 left-0 whitespace-nowrap rounded ${labelCls} px-1.5 py-0.5 text-[10px] text-white`}>
+                                  <span className={`absolute -top-5 left-0 whitespace-nowrap rounded-sm ${labelCls} px-1.5 py-0.5 text-[10px] text-white font-semibold tracking-wide`}>
                                     {String(det.className || 'ppe').toUpperCase()} {Math.round((Number(det.confidence) || 0) * 100)}%
                                   </span>
                                 </div>
@@ -620,7 +687,12 @@ export default function App() {
                         )}
                       </>
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-500 text-sm">신호 없음</div>
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-slate-700">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+                        </svg>
+                        <span className="text-[11px]">신호 없음</span>
+                      </div>
                     )}
                   </div>
                 </section>
@@ -629,66 +701,88 @@ export default function App() {
           </main>
 
           {/* 우측 사이드바 */}
-          <aside className="grid grid-rows-[auto_minmax(0,1fr)] gap-3 min-h-[420px] xl:h-[780px] overflow-hidden">
+          <aside className="grid grid-rows-[auto_minmax(0,1fr)] gap-3 min-h-[420px] xl:h-[790px] overflow-hidden">
 
-            {/* 시스템 상태 + KPI 통합 */}
-            <section className="rounded-xl bg-slate-900/60 border border-slate-700/60 p-3">
-              <h2 className="text-sm font-semibold text-slate-200 mb-3">시스템 현황</h2>
-
-              {/* CCTV 상태 */}
-              <div className="grid grid-cols-3 gap-2 text-center mb-3">
-                <StateTile label="전체 CCTV" value={cameras.length} />
-                <StateTile label="정상" value={onlineCount} tone="good" />
-                <StateTile label="오프라인" value={cameras.length - onlineCount} tone="bad" />
+            {/* 시스템 현황 */}
+            <section className="rounded-xl bg-slate-900/60 border border-slate-700/50 p-3">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">시스템 현황</h2>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800/80 border border-slate-700/60 text-slate-500">
+                    CCTV {onlineCount}/{cameras.length}
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${
+                    onlineCount === cameras.length
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                      : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                  }`}>
+                    {onlineCount === cameras.length ? '전체 정상' : '일부 오프라인'}
+                  </span>
+                </div>
               </div>
 
-              {/* KPI 통합 */}
               <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5">
-                  <p className="text-xs text-slate-400 mb-1">탐지 건수</p>
-                  <p className="text-xl font-bold text-amber-300">{violationCount}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">안전모 / 조끼</p>
+                <KpiCard title="탐지 건수" value={violationCount} sub="안전모 / 조끼" tone="warn" />
+                <KpiCard title="처리 완료" value={resolvedCount} sub={`미처리 ${pendingCount}건`} tone="good" />
+                <KpiCard title="조치 완료율" value={`${completionRate}%`} sub="전체 기준" tone="good" />
+                <KpiCard title="미처리" value={pendingCount} sub="즉시 조치 필요" tone="warn" />
+              </div>
+
+              {/* 완료율 프로그레스 바 */}
+              <div className="mt-3 pt-3 border-t border-slate-800/60">
+                <div className="flex items-center justify-between text-[10px] mb-1.5">
+                  <span className="text-slate-600">전체 조치 완료율</span>
+                  <span className="text-emerald-400 font-semibold tabular-nums">{completionRate}%</span>
                 </div>
-                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2.5">
-                  <p className="text-xs text-slate-400 mb-1">처리 완료</p>
-                  <p className="text-xl font-bold text-emerald-300">{resolvedCount}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">미처리 {pendingCount}건</p>
-                </div>
-                <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-2.5">
-                  <p className="text-xs text-slate-400 mb-1">조치 완료율</p>
-                  <p className="text-xl font-bold text-sky-300">{completionRate}%</p>
-                  <p className="text-xs text-slate-500 mt-0.5">전체 기준</p>
-                </div>
-                <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-2.5">
-                  <p className="text-xs text-slate-400 mb-1">미처리</p>
-                  <p className="text-xl font-bold text-rose-300">{pendingCount}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">즉시 조치 필요</p>
+                <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-emerald-700 to-emerald-400 rounded-full transition-all duration-700"
+                    style={{ width: `${completionRate}%` }}
+                  />
                 </div>
               </div>
             </section>
 
             {/* 알람 로그 / 운영 히스토리 */}
-            <section className="rounded-xl bg-slate-900/60 border border-slate-700/60 p-3 min-h-0 flex flex-col">
-              <div className="flex gap-2 mb-3 items-center justify-between">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setActiveTab('alerts')}
-                    className={`text-xs px-3 py-1.5 rounded-md transition-colors ${activeTab === 'alerts' ? 'bg-indigo-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'}`}
-                  >
-                    알람 로그
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('history')}
-                    className={`text-xs px-3 py-1.5 rounded-md transition-colors ${activeTab === 'history' ? 'bg-indigo-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'}`}
-                  >
-                    운영 히스토리
-                  </button>
+            <section className="rounded-xl bg-slate-900/60 border border-slate-700/50 p-3 min-h-0 flex flex-col">
+              {/* 탭 + 새로고침 */}
+              <div className="flex gap-2 mb-3 items-center">
+                <div className="flex gap-1 flex-1 bg-slate-800/60 rounded-lg p-0.5">
+                  {[
+                    { key: 'alerts', label: '알람 로그' },
+                    { key: 'stats', label: '통계' },
+                    { key: 'history', label: '히스토리' },
+                  ].map(({ key, label }) => (
+                    <button
+                      key={key}
+                      onClick={() => setActiveTab(key)}
+                      className={`relative flex-1 text-[11px] px-2 py-1.5 rounded-md transition-all font-medium ${
+                        activeTab === key
+                          ? 'bg-slate-700 text-slate-100 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      {label}
+                      {key === 'alerts' && newAlertsCount > 0 && (
+                        <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center px-1">
+                          {newAlertsCount}
+                        </span>
+                      )}
+                    </button>
+                  ))}
                 </div>
                 <button
                   onClick={loadAlerts}
-                  className="text-xs px-2 py-1.5 rounded border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-300 transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-700/60 bg-slate-900 hover:bg-slate-800 text-slate-400 transition-colors text-sm"
+                  title="새로고침"
                 >
-                  {alertsLoading ? '로딩 중...' : '새로고침'}
+                  {alertsLoading ? (
+                    <span className="text-[10px]">…</span>
+                  ) : (
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                    </svg>
+                  )}
                 </button>
               </div>
 
@@ -696,92 +790,138 @@ export default function App() {
                 <>
                   {/* 선택된 알람 상세 */}
                   {selectedAlert && (
-                    <div className="mb-2 rounded-lg border border-slate-700 bg-slate-900/80 p-2">
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${levelStyles[selectedAlert.level] || levelStyles.info}`}>
-                            {selectedAlert.level.toUpperCase()}
+                    <div className="mb-3 rounded-xl border border-slate-700/50 bg-slate-800/40 p-3">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex flex-wrap items-center gap-1">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${levelStyles[selectedAlert.level] || levelStyles.warning}`}>
+                            {selectedAlert.level?.toUpperCase()}
                           </span>
-                          <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${statusBadgeStyle[selectedAlert.status] || statusBadgeStyle.unknown}`}>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${statusBadgeStyle[selectedAlert.status] || statusBadgeStyle.unknown}`}>
                             {statusLabel[selectedAlert.status] || statusLabel.unknown}
                           </span>
                         </div>
-                        <span className="text-[11px] text-slate-400">{selectedAlert.time}</span>
+                        <span className="text-[10px] text-slate-500 tabular-nums flex-shrink-0">{selectedAlert.time}</span>
                       </div>
-                      <p className="text-xs font-medium mb-1">{selectedAlert.message}</p>
-                      <p className="text-[11px] text-slate-400 mb-1.5">{selectedAlert.camera} · {(selectedAlert.confidence * 100).toFixed(1)}%</p>
+                      <p className="text-xs font-semibold text-slate-100 mb-0.5 leading-snug">{selectedAlert.message}</p>
+                      <p className="text-[10px] text-slate-500 mb-2.5">{selectedAlert.camera} · 신뢰도 {(selectedAlert.confidence * 100).toFixed(1)}%</p>
                       <div className="flex gap-1.5">
                         <button
                           onClick={() => openActionModal('ack')}
-                          className="text-[11px] px-2 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 transition-colors flex-1"
+                          className="text-[11px] px-3 py-1.5 rounded-lg bg-emerald-600/70 hover:bg-emerald-600 transition-colors flex-1 font-medium border border-emerald-500/30 text-white"
                         >
-                          확인 (ACK)
+                          ✓ 확인 (ACK)
                         </button>
                         <button
                           onClick={() => openActionModal('resolve')}
-                          className="text-[11px] px-2 py-1 rounded-md bg-sky-700 hover:bg-sky-600 transition-colors flex-1"
+                          className="text-[11px] px-3 py-1.5 rounded-lg bg-sky-700/70 hover:bg-sky-700 transition-colors flex-1 font-medium border border-sky-500/30 text-white"
                         >
-                          해결 완료
+                          ✓ 해결 완료
                         </button>
                       </div>
                     </div>
                   )}
 
-                  {/* 필터 */}
-                  <div className="flex gap-1.5 mb-1.5 flex-wrap items-center">
-                    <FilterButton label="전체" value="all" current={alertFilter} onChange={setAlertFilter} />
-                    <FilterButton label="안전모" value="helmet" current={alertFilter} onChange={setAlertFilter} />
-                    <FilterButton label="조끼" value="vest" current={alertFilter} onChange={setAlertFilter} />
-                    <FilterButton label="둘 다" value="both" current={alertFilter} onChange={setAlertFilter} />
-                    <select
-                      value={timeRange}
-                      onChange={(e) => setTimeRange(e.target.value)}
-                      className="text-[11px] bg-slate-800 border border-slate-700 rounded-md px-1.5 py-0.5 ml-auto"
-                    >
-                      <option value="1h">1시간</option>
-                      <option value="24h">24시간</option>
-                      <option value="all">전체</option>
-                    </select>
+                  {/* 검색 + 필터 */}
+                  <div className="flex flex-col gap-1.5 mb-2">
+                    <div className="relative">
+                      <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                      </svg>
+                      <input
+                        type="text"
+                        value={searchKeyword}
+                        onChange={(e) => setSearchKeyword(e.target.value)}
+                        placeholder="카메라 · 감지유형 검색"
+                        className="w-full text-[11px] bg-slate-800/60 border border-slate-700/50 rounded-lg pl-7 pr-3 py-1.5 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
+                      />
+                    </div>
+                    <div className="flex gap-1 flex-wrap items-center">
+                      <FilterButton label="전체" value="all" current={alertFilter} onChange={setAlertFilter} />
+                      <FilterButton label="안전모" value="helmet" current={alertFilter} onChange={setAlertFilter} />
+                      <FilterButton label="조끼" value="vest" current={alertFilter} onChange={setAlertFilter} />
+                      <FilterButton label="둘 다" value="both" current={alertFilter} onChange={setAlertFilter} />
+                      <div className="ml-auto flex items-center gap-1">
+                        <button
+                          onClick={() => setHideResolved((v) => !v)}
+                          className={`text-[10px] px-2 py-1 rounded-md border transition-colors ${
+                            hideResolved
+                              ? 'border-amber-500/50 bg-amber-500/10 text-amber-300'
+                              : 'border-slate-700/50 bg-slate-900 text-slate-600 hover:text-slate-400'
+                          }`}
+                        >
+                          {hideResolved ? '완료 표시' : '완료 숨김'}
+                        </button>
+                        <select
+                          value={timeRange}
+                          onChange={(e) => setTimeRange(e.target.value)}
+                          className="text-[10px] bg-slate-800/60 border border-slate-700/50 rounded-md px-1.5 py-1 text-slate-400 focus:outline-none"
+                        >
+                          <option value="1h">1시간</option>
+                          <option value="24h">24시간</option>
+                          <option value="all">전체</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
+
                   {alertsError && (
-                    <p className="text-xs text-amber-300 mb-2 px-1">{alertsError}</p>
+                    <p className="text-[10px] text-amber-400/80 mb-1.5 px-1 flex items-center gap-1">
+                      <span>⚠</span> {alertsError}
+                    </p>
                   )}
 
-                  <ul className="space-y-2 overflow-y-auto flex-1 min-h-0 pr-1">
+                  {/* 알람 목록 */}
+                  <ul className="space-y-1 overflow-y-auto flex-1 min-h-0 pr-0.5">
                     {filteredAlerts.map((log) => (
                       <li
                         key={log.id}
                         onClick={() => setSelectedAlertId(log.id)}
-                        className={`rounded-lg border p-3 cursor-pointer transition-colors ${
+                        className={`relative rounded-lg border cursor-pointer transition-all overflow-hidden ${
                           selectedAlertId === log.id
-                            ? 'border-indigo-500/60 bg-slate-800'
-                            : 'border-slate-700/60 bg-slate-900/60 hover:bg-slate-800/60'
-                        }`}
+                            ? 'border-indigo-500/50 bg-indigo-950/30'
+                            : 'border-slate-700/30 bg-slate-900/30 hover:bg-slate-800/30 hover:border-slate-600/40'
+                        } ${log.status === 'resolved' ? 'opacity-40' : ''}`}
                       >
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className={`text-[11px] px-2 py-0.5 rounded-full ${levelStyles[log.level] || levelStyles.info}`}>
-                            {log.level.toUpperCase()}
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            <span className={`text-[11px] px-2 py-0.5 rounded-full ${statusBadgeStyle[log.status] || statusBadgeStyle.unknown}`}>
-                              {statusLabel[log.status] || statusLabel.unknown}
-                            </span>
-                            <span className="text-xs text-slate-400">{log.time}</span>
+                        {/* 심각도 액센트 바 */}
+                        <div className={`absolute left-0 top-0 bottom-0 w-0.5 ${severityAccent[log.level] || 'bg-slate-700'}`} />
+                        <div className="pl-3 pr-2.5 py-2">
+                          <div className="flex items-center justify-between gap-2 mb-0.5">
+                            <div className="flex items-center gap-1">
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${levelStyles[log.level] || levelStyles.warning}`}>
+                                {log.level?.toUpperCase()}
+                              </span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded ${statusBadgeStyle[log.status] || statusBadgeStyle.unknown}`}>
+                                {statusLabel[log.status] || ''}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-slate-500 tabular-nums">{log.time}</span>
                           </div>
+                          <p className="text-[11px] text-slate-200 font-medium leading-tight">{log.message}</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">{log.camera}</p>
                         </div>
-                        <p className="text-sm">{log.message}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">{log.camera}</p>
                       </li>
                     ))}
+                    {filteredAlerts.length === 0 && (
+                      <li className="text-center py-10 text-slate-600 text-xs flex flex-col items-center gap-2">
+                        <svg className="w-8 h-8 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                        </svg>
+                        알람 없음
+                      </li>
+                    )}
                   </ul>
                 </>
+              ) : activeTab === 'stats' ? (
+                <StatsChart alerts={alerts} />
               ) : (
-                <ul className="space-y-2 overflow-auto min-h-0 pr-1">
+                <ul className="space-y-1 overflow-auto min-h-0 pr-0.5">
                   {opsHistory.map((event) => (
-                    <li key={event.id} className="rounded-lg bg-slate-900/60 border border-slate-700/60 p-3">
-                      <div className="text-xs text-slate-400 mb-1">{event.time}</div>
-                      <div className="text-sm">{event.action}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">by {event.actor}</div>
+                    <li key={event.id} className="rounded-lg bg-slate-900/40 border border-slate-700/30 px-3 py-2">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-[10px] text-slate-500 tabular-nums">{event.time}</span>
+                        <span className="text-[10px] text-slate-600">by {event.actor}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-300 font-medium">{event.action}</div>
                     </li>
                   ))}
                 </ul>
@@ -794,7 +934,8 @@ export default function App() {
 
       {/* ── 토스트 ── */}
       {toast && (
-        <div className="fixed right-4 top-4 z-[60] rounded-lg border border-indigo-400/40 bg-indigo-500/20 px-4 py-2.5 text-sm text-indigo-100 shadow-lg">
+        <div className="fixed right-4 top-4 z-[60] flex items-center gap-2.5 rounded-xl border border-indigo-400/25 bg-slate-900/95 backdrop-blur-md px-4 py-2.5 text-[12px] text-slate-100 shadow-xl shadow-black/40">
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />
           {toast}
         </div>
       )}
@@ -802,40 +943,55 @@ export default function App() {
       {/* ── 액션 모달 ── */}
       {showActionModal && selectedAlert && (
         <div
-          className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={() => setShowActionModal(false)}
         >
           <div
-            className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-5"
+            className="w-full max-w-md rounded-2xl border border-slate-700/70 bg-slate-900 shadow-2xl shadow-black/60 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-base font-semibold mb-1">
-              {actionType === 'ack' ? '알람 확인 처리' : '해결 완료 처리'}
-            </h3>
-            <p className="text-xs text-slate-400 mb-4">
-              {selectedAlert.camera} · {selectedAlert.message}
-            </p>
-            <div className="grid gap-3 mb-4">
-              <label className="text-xs text-slate-300">메모 (선택)</label>
+            {/* 모달 헤더 */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-slate-800">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-100">
+                  {actionType === 'ack' ? '알람 확인 처리' : '해결 완료 처리'}
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  {selectedAlert.camera} · {selectedAlert.message}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowActionModal(false)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 transition-colors text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* 모달 바디 */}
+            <div className="px-5 py-4">
+              <label className="block text-[11px] text-slate-400 mb-1.5 font-medium">메모 (선택)</label>
               <textarea
                 value={actionNote}
                 onChange={(e) => setActionNote(e.target.value)}
                 rows={3}
-                className="bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-sm placeholder:text-slate-500"
+                className="w-full bg-slate-800/60 border border-slate-700/60 rounded-xl px-3 py-2.5 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 resize-none transition-colors"
                 placeholder="조치 내용을 입력하세요"
               />
             </div>
-            <div className="flex justify-end gap-2">
+
+            {/* 모달 푸터 */}
+            <div className="flex justify-end gap-2 px-5 pb-5">
               <button
                 onClick={() => setShowActionModal(false)}
-                className="text-sm px-4 py-2 rounded-md bg-slate-800 hover:bg-slate-700 transition-colors"
+                className="text-xs px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors text-slate-300 border border-slate-700/60"
               >
                 취소
               </button>
               <button
                 onClick={applyAlertAction}
                 disabled={actionSaving}
-                className="text-sm px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 transition-colors"
+                className="text-xs px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 transition-colors text-white font-medium"
               >
                 {actionSaving ? '저장 중...' : '저장'}
               </button>
@@ -847,18 +1003,21 @@ export default function App() {
       {/* ── 전체화면 모달 ── */}
       {selected && (
         <div
-          className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex items-center justify-center p-4"
           onClick={() => setSelected(null)}
         >
           <div
-            className="w-full max-w-5xl rounded-xl overflow-hidden border border-slate-700 bg-slate-900"
+            className="w-full max-w-5xl rounded-2xl overflow-hidden border border-slate-700/50 bg-slate-900 shadow-2xl shadow-black/80"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-4 py-3 border-b border-slate-800 flex justify-between items-center">
-              <span className="font-medium">{selected.name}</span>
+            <div className="px-4 py-3 border-b border-slate-800/80 flex justify-between items-center bg-slate-900/80">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_4px_#34d399]" />
+                <span className="text-sm font-semibold text-slate-200">{selected.name}</span>
+              </div>
               <button
                 onClick={() => setSelected(null)}
-                className="text-xs px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 transition-colors"
+                className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors text-slate-300 border border-slate-700/60"
               >
                 닫기
               </button>

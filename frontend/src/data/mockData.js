@@ -1,22 +1,28 @@
 export const cameras = [
-  { id: 1, name: 'CAM 01 - Entrance', url: '/cam1.mp4', online: true },
-  { id: 2, name: 'CAM 02 - Lobby', url: '/cam2.mp4', online: true },
-  { id: 3, name: 'CAM 03 - Parking', url: '/cam3.mp4', online: true },
-  { id: 4, name: 'CAM 04 - Warehouse', url: '/cam4.mp4', online: true },
+  { id: 1, name: 'CAM 01 - Entrance',  url: '/cam1_12fps_0.33.mp4', online: true },
+  { id: 2, name: 'CAM 02 - Lobby',     url: '/cam2_12fps_0.33.mp4', online: true },
+  { id: 3, name: 'CAM 03 - Parking',   url: '/cam3_12fps_0.33.mp4', online: true },
+  { id: 4, name: 'CAM 04 - Warehouse', url: '/cam4_12fps_0.33.mp4', online: true },
 ]
 
+// 현재 시간 기준으로 상대적 시간 생성
+const t = (minAgo) => {
+  const d = new Date(Date.now() - minAgo * 60 * 1000)
+  return d.toLocaleTimeString('ko-KR', { hour12: false })
+}
+
 export const initialAlertLogs = [
-  { id: 1, level: 'critical', type: 'helmet', time: '18:31:22', camera: 'CAM 03 - Parking', message: '안전모 미착용 인원 감지', confidence: 0.91, status: 'new' },
-  { id: 2, level: 'warning', type: 'vest', time: '18:29:10', camera: 'CAM 02 - Lobby', message: '안전조끼 미착용 인원 감지', confidence: 0.84, status: 'new' },
-  { id: 3, level: 'critical', type: 'both', time: '18:27:04', camera: 'CAM 04 - Warehouse', message: '안전모/안전조끼 미착용 인원 감지', confidence: 0.93, status: 'acked' },
-  { id: 4, level: 'info', type: 'ok', time: '18:21:35', camera: 'CAM 01 - Entrance', message: 'PPE 준수 상태 정상', confidence: 0.98, status: 'acked' },
+  { id: 1, level: 'critical', type: 'helmet', time: t(2),  camera: 'CAM 03 - Parking',   message: '안전모 미착용 인원 감지',      confidence: 0.91, status: 'new',    createdAt: Date.now() - 2 * 60000 },
+  { id: 2, level: 'warning',  type: 'vest',   time: t(5),  camera: 'CAM 02 - Lobby',     message: '안전조끼 미착용 인원 감지',    confidence: 0.84, status: 'new',    createdAt: Date.now() - 5 * 60000 },
+  { id: 3, level: 'critical', type: 'both',   time: t(9),  camera: 'CAM 04 - Warehouse', message: '안전모/안전조끼 미착용 인원 감지', confidence: 0.93, status: 'acked', createdAt: Date.now() - 9 * 60000 },
+  { id: 4, level: 'info',     type: 'ok',     time: t(15), camera: 'CAM 01 - Entrance',  message: 'PPE 준수 상태 정상',          confidence: 0.98, status: 'acked', createdAt: Date.now() - 15 * 60000 },
 ]
 
 export const eventHistory = [
-  { id: 1, time: '18:20', action: '관리자 로그인', actor: 'admin01' },
-  { id: 2, time: '18:12', action: 'CAM 04 확대 보기', actor: 'admin01' },
-  { id: 3, time: '18:09', action: '알람 확인 처리', actor: 'manager02' },
-  { id: 4, time: '18:02', action: '분석 작업 시작', actor: 'system' },
+  { id: 1, time: t(5),  action: '관리자 로그인',   actor: 'admin01' },
+  { id: 2, time: t(10), action: 'CAM 04 확대 보기', actor: 'admin01' },
+  { id: 3, time: t(14), action: '알람 확인 처리',   actor: 'manager02' },
+  { id: 4, time: t(20), action: '분석 작업 시작',   actor: 'system' },
 ]
 
 export const systemEvents = [
@@ -25,18 +31,6 @@ export const systemEvents = [
   '[QUEUE] 분석 작업 2건 대기',
   '[STORAGE] 결과 저장 경로 정상',
 ]
-
-export const bottomFeed = [
-  { id: 1, level: 'critical', text: '[18:31:22] CAM 03 - Parking | 안전모 미착용 인원 감지' },
-  { id: 2, level: 'warning', text: '[18:29:10] CAM 02 - Lobby | 안전조끼 미착용 인원 감지' },
-  { id: 3, level: 'critical', text: '[18:27:04] CAM 04 - Warehouse | 안전모/안전조끼 미착용 인원 감지' },
-  { id: 4, level: 'info', text: '[18:21:35] CAM 01 - Entrance | PPE 준수 상태 정상' },
-]
-
-export const demoScenario = {
-  A: { name: '시나리오 A · 주간 작업 구역', people: 17, violations: 5, completeAt: '20:44:10' },
-  B: { name: '시나리오 B · 야간 창고 점검', people: 11, violations: 3, completeAt: '20:44:35' },
-}
 
 export const statusChip = [
   { name: 'Gateway', value: 'Connected', tone: 'ok' },

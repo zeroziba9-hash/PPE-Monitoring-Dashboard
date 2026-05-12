@@ -12,7 +12,13 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "cctv_event")
+@Table(
+    name = "cctv_event",
+    indexes = {
+        @Index(name = "idx_cctv_code_detected", columnList = "cctv_no, detected_code, detected_at DESC"),
+        @Index(name = "idx_created_at", columnList = "created_at DESC")
+    }
+)
 public class Event {
 
     @Id
@@ -35,6 +41,10 @@ public class Event {
     @Lob
     @Column(name = "bbox_json")
     private String bboxJson;
+
+    @Builder.Default
+    @Column(name = "status", length = 20, nullable = false)
+    private String status = "new";
 
     @Builder.Default
     @Column(name = "completed_flag", columnDefinition = "TINYINT(1) DEFAULT 0")

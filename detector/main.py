@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import threading
 import time
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -15,7 +16,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from ultralytics import YOLO
 
-app = FastAPI(title="PPE Detector Bridge")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup
+    if not MODEL_PATH.exists():
+        raise RuntimeError(f"모델 파일 없음: {MODEL_PATH}")
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    state.model = YOLO(str(MODEL_PATH))
+    state.class_names = state.model.names if hasattr(state.model, "names") else {}
+    yield
+    # shutdown: 모든 감지 스레드 중단
+    for ev in list(state.stop_events.values()):
+        ev.set()
+    state.stop_events.clear()
+    state.running = False
+
+
+app = FastAPI(title="PPE Detector Bridge", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -24,9 +42,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MODEL_PATH = Path(r"C:\Users\ASUS\Desktop\PPE-monitoring\AI\new_best_model\weights\best.pt")
+_BASE = Path(__file__).resolve().parent.parent   # PPE-monitoring/ 루트
+MODEL_PATH = _BASE / "AI" / "new_best_model" / "weights" / "best.pt"
 SPRING_EVENT_API = "http://localhost:8080/api/event"
-UPLOAD_DIR = Path(r"C:\Users\ASUS\Desktop\PPE-monitoring\detector\uploads")
+UPLOAD_DIR = Path(__file__).resolve().parent / "uploads"
 
 
 @dataclass
@@ -45,6 +64,7 @@ class DetectorState:
     latest_detections: list[dict[str, Any]] | None = None
     latest_by_camera: dict[str, dict[str, Any]] = field(default_factory=dict)
     stop_events: dict[str, threading.Event] = field(default_factory=dict)
+    _lock: threading.Lock = field(default_factory=threading.Lock)
 
 
 state = DetectorState()
@@ -214,13 +234,14 @@ def _run_loop(source: str | int, camera_name: str, stop_event: threading.Event):
 
             live_detections = _extract_live_detections_with_names(results[0], w, h, class_names)
             now_ts = time.time()
-            state.latest_camera_name = camera_name
-            state.latest_detections = live_detections
-            state.latest_updated_at = now_ts
-            state.latest_by_camera[camera_name] = {
-                "updatedAt": now_ts,
-                "detections": live_detections,
-            }
+            with state._lock:
+                state.latest_camera_name = camera_name
+                state.latest_detections = live_detections
+                state.latest_updated_at = now_ts
+                state.latest_by_camera[camera_name] = {
+                    "updatedAt": now_ts,
+                    "detections": live_detections,
+                }
 
             violations = _detect_violations_with_names(results[0], class_names)
             for v in violations:
@@ -237,24 +258,16 @@ def _run_loop(source: str | int, camera_name: str, stop_event: threading.Event):
                     state.last_error = f"이벤트 전송 실패: {e}"
     finally:
         cap.release()
-        # 현재 스레드의 stop_event가 아직 자신 것일 때만 제거 (새 스레드 등록 후엔 건드리지 않음)
-        if state.stop_events.get(camera_name) is stop_event:
-            state.stop_events.pop(camera_name, None)
-        state.running = len(state.stop_events) > 0
+        with state._lock:
+            # 현재 스레드의 stop_event가 아직 자신 것일 때만 제거 (새 스레드 등록 후엔 건드리지 않음)
+            if state.stop_events.get(camera_name) is stop_event:
+                state.stop_events.pop(camera_name, None)
+            state.running = len(state.stop_events) > 0
 
 
 class StartRequest(BaseModel):
     source: str = "0"
     cameraName: str = "CAM 04 - Warehouse"
-
-
-@app.on_event("startup")
-def on_startup():
-    if not MODEL_PATH.exists():
-        raise RuntimeError(f"모델 파일 없음: {MODEL_PATH}")
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    state.model = YOLO(str(MODEL_PATH))
-    state.class_names = state.model.names if hasattr(state.model, "names") else {}
 
 
 @app.get("/health")
@@ -276,13 +289,14 @@ def status():
 
 @app.get("/live-detections")
 def live_detections():
-    return {
-        "running": state.running,
-        "cameraName": state.latest_camera_name,
-        "updatedAt": state.latest_updated_at,
-        "detections": state.latest_detections or [],
-        "detectionsByCamera": state.latest_by_camera,
-    }
+    with state._lock:
+        return {
+            "running": state.running,
+            "cameraName": state.latest_camera_name,
+            "updatedAt": state.latest_updated_at,
+            "detections": list(state.latest_detections or []),
+            "detectionsByCamera": {k: dict(v) for k, v in state.latest_by_camera.items()},
+        }
 
 
 @app.post("/start")
@@ -293,28 +307,24 @@ def start(req: StartRequest):
     else:
         src = req.source
 
-    prev = state.stop_events.get(req.cameraName)
-    if prev:
-        prev.set()
+    with state._lock:
+        prev = state.stop_events.get(req.cameraName)
+        if prev:
+            prev.set()
+        state.latest_by_camera.pop(req.cameraName, None)
+        stop_event = threading.Event()
+        state.stop_events[req.cameraName] = stop_event
+        state.running = True
+        state.source = src
+        state.camera_name = req.cameraName
+        state.stop_event = stop_event
+        state.last_error = ""
+        state.latest_camera_name = req.cameraName
+        state.latest_updated_at = 0.0
+        state.latest_detections = []
 
-    # 이전 데이터 즉시 삭제
-    state.latest_by_camera.pop(req.cameraName, None)
-
-    stop_event = threading.Event()
     t = threading.Thread(target=_run_loop, args=(src, req.cameraName, stop_event), daemon=True)
-
-    state.running = True
-    state.source = src
-    state.camera_name = req.cameraName
-    state.stop_event = stop_event
     state.thread = t
-    state.stop_events[req.cameraName] = stop_event
-    state.running = True
-    state.last_error = ""
-    state.latest_camera_name = req.cameraName
-    state.latest_updated_at = 0.0
-    state.latest_detections = []
-
     t.start()
     return {"ok": True, "running": True, "source": src, "cameraName": req.cameraName}
 
@@ -330,40 +340,42 @@ async def analyze_upload(
     with save_path.open("wb") as f:
         f.write(await file.read())
 
-    # 이전 스레드 즉시 중단
-    prev = state.stop_events.get(cameraName)
-    if prev:
-        prev.set()
+    with state._lock:
+        prev = state.stop_events.get(cameraName)
+        if prev:
+            prev.set()
+        state.latest_by_camera.pop(cameraName, None)
+        stop_event = threading.Event()
+        state.stop_events[cameraName] = stop_event
+        state.running = True
+        state.source = str(save_path)
+        state.camera_name = cameraName
+        state.stop_event = stop_event
+        state.last_error = ""
+        state.latest_camera_name = cameraName
+        state.latest_updated_at = 0.0
+        state.latest_detections = []
 
-    # 서버 측 이전 데이터 즉시 삭제 (핵심 수정)
-    state.latest_by_camera.pop(cameraName, None)
+    def _run_and_cleanup():
+        _run_loop(str(save_path), cameraName, stop_event)
+        try:
+            save_path.unlink(missing_ok=True)
+        except Exception:
+            pass
 
-    stop_event = threading.Event()
-    t = threading.Thread(target=_run_loop, args=(str(save_path), cameraName, stop_event), daemon=True)
-
-    state.running = True
-    state.source = str(save_path)
-    state.camera_name = cameraName
-    state.stop_event = stop_event
+    t = threading.Thread(target=_run_and_cleanup, daemon=True)
     state.thread = t
-    state.stop_events[cameraName] = stop_event
-    state.last_error = ""
-    state.latest_camera_name = cameraName
-    state.latest_updated_at = 0.0
-    state.latest_detections = []
-
     t.start()
     return {"ok": True, "running": True, "source": str(save_path), "cameraName": cameraName}
 
 
 @app.post("/stop")
 def stop():
-    if not state.running and len(state.stop_events) == 0:
-        return {"ok": True, "running": False}
-
-    for ev in list(state.stop_events.values()):
-        ev.set()
-
-    state.stop_events.clear()
-    state.running = False
+    with state._lock:
+        if not state.running and len(state.stop_events) == 0:
+            return {"ok": True, "running": False}
+        for ev in list(state.stop_events.values()):
+            ev.set()
+        state.stop_events.clear()
+        state.running = False
     return {"ok": True, "running": False}

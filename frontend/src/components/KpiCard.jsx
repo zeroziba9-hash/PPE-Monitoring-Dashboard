@@ -1,21 +1,23 @@
 export default function KpiCard({ title, value, sub, tone = 'default' }) {
-  const toneStyle = tone === 'warn'
-    ? 'border-amber-400/40 bg-gradient-to-br from-amber-500/10 to-slate-900/60'
-    : tone === 'good'
-      ? 'border-emerald-400/40 bg-gradient-to-br from-emerald-500/10 to-slate-900/60'
-      : 'border-slate-700/80 bg-gradient-to-br from-slate-800/60 to-slate-900/60'
+  const accentColor =
+    tone === 'warn'
+      ? 'border-l-amber-500'
+      : tone === 'good'
+        ? 'border-l-emerald-500'
+        : 'border-l-slate-600'
 
-  const valueColor = tone === 'warn'
-    ? 'text-amber-300'
-    : tone === 'good'
-      ? 'text-emerald-300'
-      : 'text-slate-100'
+  const valueColor =
+    tone === 'warn'
+      ? 'text-amber-300'
+      : tone === 'good'
+        ? 'text-emerald-300'
+        : 'text-slate-100'
 
   return (
-    <article className={`rounded-xl border px-4 py-3 shadow-sm ${toneStyle}`}>
-      <p className="text-xs text-slate-400 leading-tight mb-2">{title}</p>
-      <p className={`text-2xl font-bold leading-none tracking-tight ${valueColor}`}>{value}</p>
-      <p className="text-xs text-slate-500 mt-1.5 leading-tight">{sub}</p>
+    <article className={`rounded-lg border border-slate-700/50 border-l-2 ${accentColor} bg-slate-900/40 px-3 py-2.5`}>
+      <p className="text-[10px] text-slate-500 leading-tight mb-1.5 font-medium uppercase tracking-wide">{title}</p>
+      <p className={`text-xl font-bold leading-none tracking-tight tabular-nums ${valueColor}`}>{value}</p>
+      <p className="text-[10px] text-slate-600 mt-1 leading-tight">{sub}</p>
     </article>
   )
 }
