@@ -32,6 +32,13 @@ dependencies {
     runtimeOnly 'com.mysql:mysql-connector-j'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
+    // BCrypt 비밀번호 해싱
+    implementation 'org.springframework.security:spring-security-crypto'
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
+    // JWT 인증
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.3'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
 }
 
 dependencyManagement {
@@ -43,3 +50,9 @@ dependencyManagement {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// SQL/리소스 파일 UTF-8 인코딩 보존 (Windows CP949 자동 변환 방지)
+tasks.withType(ProcessResources).configureEach {
+	filteringCharset = 'UTF-8'
+}
+compileJava.options.encoding = 'UTF-8'

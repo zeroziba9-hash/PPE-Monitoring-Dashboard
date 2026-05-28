@@ -42,9 +42,16 @@ public class Event {
     @Column(name = "bbox_json")
     private String bboxJson;
 
+    @Column(name = "image_path", length = 500)
+    private String imagePath;
+
     @Builder.Default
     @Column(name = "status", length = 20, nullable = false)
     private String status = "new";
+
+    @Lob
+    @Column(name = "action_notes")
+    private String actionNotes;
 
     @Builder.Default
     @Column(name = "completed_flag", columnDefinition = "TINYINT(1) DEFAULT 0")

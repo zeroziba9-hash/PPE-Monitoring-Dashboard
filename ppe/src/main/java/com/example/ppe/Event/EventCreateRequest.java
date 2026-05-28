@@ -10,4 +10,5 @@ public class EventCreateRequest {
     private Integer detectedCode;
     private Double confidence;
     private String bboxJson;
+    private String imageBase64; // 위반 순간 프레임 (JPEG base64)
 }

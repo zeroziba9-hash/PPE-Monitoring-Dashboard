@@ -7,4 +7,5 @@ import lombok.Setter;
 @Setter
 public class EventStatusRequest {
     private String status;
+    private String notes; // 조치 메모 (선택)
 }

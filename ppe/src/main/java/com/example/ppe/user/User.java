@@ -23,7 +23,7 @@ public class User {
     @Column(name = "employee_name", length = 20, nullable = false)
     private String employeeName;
 
-    @Column(length = 20, nullable = false)
+    @Column(length = 255, nullable = false)
     private String password;
 
     @Builder.Default

@@ -349,6 +349,28 @@ export default function App() {
     setShowActionModal(true)
   }
 
+  const handleBulkAck = async () => {
+    const targets = alerts.filter((a) => a.status === 'new')
+    if (targets.length === 0) return
+    await Promise.all(
+      targets.map(async (a) => {
+        try { await patchAlertStatus(a.id, { status: 'acked' }) } catch { /* ignore */ }
+      }),
+    )
+    setAlerts((prev) => prev.map((a) => a.status === 'new' ? { ...a, status: 'acked' } : a))
+  }
+
+  const handleBulkResolve = async () => {
+    const targets = alerts.filter((a) => a.status !== 'resolved')
+    if (targets.length === 0) return
+    await Promise.all(
+      targets.map(async (a) => {
+        try { await patchAlertStatus(a.id, { status: 'resolved' }) } catch { /* ignore */ }
+      }),
+    )
+    setAlerts((prev) => prev.map((a) => a.status !== 'resolved' ? { ...a, status: 'resolved' } : a))
+  }
+
   const applyAlertAction = async () => {
     if (!selectedAlert) return
     const nextStatus = actionToStatus[actionType] ?? 'acked'
@@ -771,6 +793,24 @@ export default function App() {
                     </button>
                   ))}
                 </div>
+                {activeTab === 'alerts' && (
+                  <>
+                    <button
+                      onClick={handleBulkAck}
+                      title="미확인 전체 ACK"
+                      className="h-8 px-2.5 rounded-lg border border-slate-700/60 bg-slate-900 hover:bg-slate-800 text-slate-400 text-[10px] transition-colors whitespace-nowrap"
+                    >
+                      전체 확인
+                    </button>
+                    <button
+                      onClick={handleBulkResolve}
+                      title="미처리 전체 완료 처리"
+                      className="h-8 px-2.5 rounded-lg border border-emerald-700/40 bg-emerald-900/20 hover:bg-emerald-900/40 text-emerald-400 text-[10px] transition-colors whitespace-nowrap"
+                    >
+                      전체 완료
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={loadAlerts}
                   className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-700/60 bg-slate-900 hover:bg-slate-800 text-slate-400 transition-colors text-sm"

@@ -1,12 +1,13 @@
 package com.example.ppe.user;
 
+import com.example.ppe.config.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -15,17 +16,22 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final JwtUtil jwtUtil;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
             User user = userService.login(loginRequest.getEmployeeId(), loginRequest.getPassword());
-            // 비밀번호를 제외한 정보만 전달하기 위해 DTO 사용
-            return ResponseEntity.ok(UserResponse.from(user));
+            String token = jwtUtil.generateToken(user.getEmployeeId(), user.getEmployeeName());
+            return ResponseEntity.ok(Map.of(
+                    "token", token,
+                    "employeeId", user.getEmployeeId(),
+                    "employeeName", user.getEmployeeName(),
+                    "safetyManagerFlag", user.isSafetyManagerFlag()
+            ));
         } catch (IllegalArgumentException e) {
-            // 아이디가 없거나 비밀번호가 틀린 경우 401 응답
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", e.getMessage()));
         }
-}
-
+    }
 }

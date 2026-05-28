@@ -182,18 +182,41 @@ def _extract_live_detections(result: Any, frame_w: int, frame_h: int) -> list[di
     return _extract_live_detections_with_names(result, frame_w, frame_h, state.class_names or {})
 
 
-def _post_event(cctv_no: str, detected_code: int, confidence: float, person_box: list[float], frame_w: int, frame_h: int):
+def _frame_to_base64(frame: Any, person_box: list[float] | None = None) -> str | None:
+    """프레임을 JPEG base64로 인코딩. person_box가 있으면 위반 영역 하이라이트."""
+    try:
+        vis = frame.copy()
+        if person_box is not None and len(person_box) == 4:
+            x1, y1, x2, y2 = [int(v) for v in person_box]
+            cv2.rectangle(vis, (x1, y1), (x2, y2), (0, 0, 255), 3)
+            cv2.putText(vis, "VIOLATION", (x1, max(y1 - 10, 20)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+        ok, buf = cv2.imencode(".jpg", vis, [cv2.IMWRITE_JPEG_QUALITY, 70])
+        if not ok:
+            return None
+        import base64
+        return base64.b64encode(buf.tobytes()).decode("utf-8")
+    except Exception:
+        return None
+
+
+def _post_event(cctv_no: str, detected_code: int, confidence: float,
+                person_box: list[float], frame_w: int, frame_h: int,
+                frame: Any | None = None):
     norm_box = _normalize_box_xyxy(person_box, frame_w, frame_h)
     bbox = {"person": norm_box}
+
+    image_base64 = _frame_to_base64(frame, person_box) if frame is not None else None
 
     payload = {
         "cctvNo": cctv_no,
         "detectedCode": detected_code,
         "confidence": round(confidence, 4),
         "bboxJson": json.dumps(bbox, ensure_ascii=False),
+        "imageBase64": image_base64,
     }
 
-    response = requests.post(SPRING_EVENT_API, json=payload, timeout=3)
+    response = requests.post(SPRING_EVENT_API, json=payload, timeout=5)
     response.raise_for_status()
     state.sent_count += 1
 
@@ -253,6 +276,7 @@ def _run_loop(source: str | int, camera_name: str, stop_event: threading.Event):
                         person_box=v["person_box"],
                         frame_w=w,
                         frame_h=h,
+                        frame=frame,
                     )
                 except Exception as e:
                     state.last_error = f"이벤트 전송 실패: {e}"
